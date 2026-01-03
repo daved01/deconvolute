@@ -96,7 +96,11 @@ We follow Conventional Commits. This allows us to generate changelogs automatica
 ### Release Process (Maintainers Only)
 
 1.  **Generate Changelog:**
+<<<<<<< HEAD
     Run the following command locally to generate the changelog for the new version (e.g. `0.1.0`):
+=======
+    Run the following command locally to generate the changelog for the new version (e.g., `0.1.0`):
+>>>>>>> 1f590dc (feat: init commit)
     ```bash
     uv run git-cliff --tag 0.1.0 --output CHANGELOG.md
     ```
@@ -110,7 +114,11 @@ We follow Conventional Commits. This allows us to generate changelogs automatica
 4.  **Trigger Release:**
     * Go to the **Actions** tab on GitHub.
     * Select **Release to TestPyPI** (or **Release to PyPI** once configured).
+<<<<<<< HEAD
     * Click **Run workflow** and enter the version number (e.g. `0.1.0`).
+=======
+    * Click **Run workflow** and enter the version number (e.g., `0.1.0`).
+>>>>>>> 1f590dc (feat: init commit)
 
 ## 3. TODO: More coming soon
 

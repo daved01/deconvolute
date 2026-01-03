@@ -4,18 +4,30 @@ on:
   workflow_dispatch:
     inputs:
       version:
+<<<<<<< HEAD
         description: 'Version to release (e.g. 0.1.0)'
+=======
+        description: 'Version to release (e.g., 0.1.0)'
+>>>>>>> 1f590dc (feat: init commit)
         required: true
         type: string
 
 permissions:
   contents: write  # Needed to push the tag back to the repo
+<<<<<<< HEAD
   id-token: write  # Needed for trusted publishing
+=======
+  id-token: write  # Needed for Trusted Publishing
+>>>>>>> 1f590dc (feat: init commit)
 
 jobs:
   validate-and-release:
     runs-on: ubuntu-latest
+<<<<<<< HEAD
     if: github.ref == 'refs/heads/main'  # Only runs on main branch
+=======
+    if: github.ref == 'refs/heads/main'  # CONSTRAINT: Only runs on main branch
+>>>>>>> 1f590dc (feat: init commit)
     environment:
       name: testpypi
       url: https://test.pypi.org/p/deconvolute
@@ -32,7 +44,11 @@ jobs:
         run: |
           NEW_VERSION="${{ inputs.version }}"
           
+<<<<<<< HEAD
           # Get the latest tag (e.g. v0.0.9), default to v0.0.0 if none
+=======
+          # Get the latest tag (e.g., v0.0.9), default to v0.0.0 if none
+>>>>>>> 1f590dc (feat: init commit)
           LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
           LAST_VER=${LAST_TAG#v} # Remove 'v' prefix
 

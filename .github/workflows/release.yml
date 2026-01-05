@@ -17,8 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'  # Only runs on main branch
     environment:
-      name: testpypi
-      url: https://test.pypi.org/p/deconvolute
+      name: pypi
+      url: https://pypi.org/p/deconvolute
     
     steps:
       - uses: actions/checkout@v6
@@ -88,10 +88,9 @@ jobs:
       - name: Build Package
         run: uv build
 
-      - name: Publish to TestPyPI
+      - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          repository-url: https://test.pypi.org/legacy/
           verbose: true
 
       - name: Create and Push Tag

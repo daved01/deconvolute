@@ -1,4 +1,4 @@
-name: Release to TestPyPI
+name: Release to PyPI
 
 on:
   workflow_dispatch:

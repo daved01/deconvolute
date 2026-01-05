@@ -29,7 +29,7 @@ Deconvolute follows a layered defense strategy:
 - Prevents false positives from valid hex strings like color codes or hashes.
 - Forces attackers to explicitly target the token during jailbreak attempts.
 - Targeted attacks reliably trigger detection when the token is filtered.
-    
+
 #### Integrity model
 - Uses Active Integrity Checks instead of passive leakage detection.
 - Designed to detect context overwrites in RAG systems.

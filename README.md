@@ -77,7 +77,7 @@ llm_response: str = llm.invoke(
 # Check (Verifies adherence)
 result: CanaryResult = canary.check(llm_response, token)
 
-if result.detected:
+if result.threat_detected:
     # The LLM ignored our mandatory instruction -> High likelihood of Jailbreak
     print(f"Jailbreak detected! Timestamp: {result.timestamp}")
     raise SecurityDetectedError("Response blocked: Instructional adherence failed.")

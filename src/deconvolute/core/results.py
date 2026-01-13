@@ -12,7 +12,7 @@ class DetectionResult(BaseModel):
     (Canaries, Scanners, etc.), making it easier to log and analyze threats uniformly.
 
     Attributes:
-        detected (bool): True if a threat or security violation was detected.
+        threat_detected (bool): True if a threat or security violation was detected.
             False indicates the content is considered safe.
         timestamp (datetime): The UTC timestamp when the check was performed.
             Defaults to the current time.
@@ -22,7 +22,7 @@ class DetectionResult(BaseModel):
             Used for telemetry (e.g. latency, model versions, specific rule IDs).
     """
 
-    detected: bool = Field(
+    threat_detected: bool = Field(
         ..., description="True if a threat or leak was detected. False if safe."
     )
     timestamp: datetime = Field(
@@ -46,7 +46,7 @@ class DetectionResult(BaseModel):
         """
         Helper for readable conditionals: if result.safe: ...
         """
-        return not self.detected
+        return not self.threat_detected
 
 
 class CanaryResult(DetectionResult):

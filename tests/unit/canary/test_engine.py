@@ -25,7 +25,7 @@ def test_inject_structure() -> None:
 
 
 def test_check_safe_exact_match() -> None:
-    """It should return detected=False (Safe) if the token is present."""
+    """It should return threat_detected=False (Safe) if the token is present."""
     canary = Canary()
     _, token = canary.inject("sys")
 
@@ -34,14 +34,14 @@ def test_check_safe_exact_match() -> None:
 
     result = canary.check(response, token)
 
-    assert result.detected is False
+    assert result.threat_detected is False
     assert result.safe is True
     assert result.token_found == token
 
 
 def test_check_fail_fuzzy_match_spaces() -> None:
     """
-    It should return unsafe (detected=True) if the token is present but
+    It should return unsafe (threat_detected=True) if the token is present but
     malformed (e.g. spaces). Strict integrity check means any
     deviation is a potential jailbreak or failure.
     """
@@ -56,12 +56,12 @@ def test_check_fail_fuzzy_match_spaces() -> None:
 
     result = canary.check(response, full_token)
 
-    assert result.detected is True
+    assert result.threat_detected is True
     assert result.token_found is None
 
 
 def test_check_fail_fuzzy_match_colon() -> None:
-    """It should return unsafe (detected=True) for malformed separators."""
+    """It should return unsafe (threat_detected=True) for malformed separators."""
     canary = Canary()
     token_str = "dcv-12345"
     full_token = f"<<Integrity: {token_str}>>"
@@ -72,12 +72,12 @@ def test_check_fail_fuzzy_match_colon() -> None:
 
     result = canary.check(response, full_token)
 
-    assert result.detected is True
+    assert result.threat_detected is True
     assert result.token_found is None
 
 
 def test_check_jailbreak_missing_token() -> None:
-    """It should return detected=True (Jailbreak) if token is missing."""
+    """It should return threat_detected=True (Jailbreak) if token is missing."""
     canary = Canary()
     _, token = canary.inject("sys")
 
@@ -86,7 +86,7 @@ def test_check_jailbreak_missing_token() -> None:
 
     result = canary.check(response, token)
 
-    assert result.detected is True
+    assert result.threat_detected is True
     assert result.token_found is None
 
 
@@ -94,7 +94,7 @@ def test_check_empty_response() -> None:
     """It should flag empty responses as failures."""
     canary = Canary()
     result = canary.check("", "some-token")
-    assert result.detected is True
+    assert result.threat_detected is True
 
 
 def test_clean_removes_token() -> None:

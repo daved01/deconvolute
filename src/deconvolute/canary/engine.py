@@ -72,21 +72,23 @@ class Canary:
 
         Returns:
             CanaryResult:
-                - detected=True if token is MISSING (Jailbreak).
-                - detected=False if token is PRESENT (Safe).
+                - threat_detected=True if token is MISSING (Jailbreak).
+                - threat_detected=False if token is PRESENT (Safe).
         """
         if not response:
             # Empty response is a failure of adherence
-            return CanaryResult(detected=True, component="Canary", token_found=None)
+            return CanaryResult(
+                threat_detected=True, component="Canary", token_found=None
+            )
 
         # Strict Check: The model must reproduce the phrase exactly.
         if token in response:
-            return CanaryResult(detected=False, token_found=token)
+            return CanaryResult(threat_detected=False, token_found=token)
 
         # We assume Jailbreak if exact match fails.
         # (We intentionally avoid fuzzy matching here because we demanded exact output).
         logger.warning(f"Integrity check failed. Token missing: {token}")
-        return CanaryResult(detected=True, token_found=None)
+        return CanaryResult(threat_detected=True, token_found=None)
 
     def clean(self, response: str, token: str) -> str:
         """

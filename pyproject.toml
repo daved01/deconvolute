@@ -36,6 +36,9 @@ Issues = "https://github.com/daved01/deconvolute/issues"
 ml = [
   "onnxruntime>=1.16.0",
 ]
+language = [
+    "lingua-language-detector>=2.1.1",
+]
 
 [dependency-groups]
 dev = [

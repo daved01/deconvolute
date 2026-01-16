@@ -1,3 +1,13 @@
+## [0.1.0a5] - 2026-01-16
+
+### 🚀 Features
+
+- Add language detection feature (#5)
+
+### ⚙️ Miscellaneous Tasks
+
+- Refactor into new structure and add better tests (#4)
+- Update links
 ## [0.1.0a4] - 2026-01-13
 
 ### 🚀 Features

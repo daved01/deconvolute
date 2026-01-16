@@ -39,6 +39,9 @@ ml = [
 language = [
     "lingua-language-detector>=2.1.1",
 ]
+all = [
+    "deconvolute[ml,language]",
+]
 
 [dependency-groups]
 dev = [

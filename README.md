@@ -30,6 +30,12 @@ Optional Features: To use the Language Detection module, install the extra:
 pip install deconvolute[language]
 ```
 
+Or, if you want to install everyting, just run
+
+```bash
+pip install deconvolute[all]
+```
+
 ## Usage
 
 Deconvolute is architected to defend the critical threat surfaces of an AI Agent or RAG pipeline, with a primary focus on preventing Poisoned Knowledge and Indirect Prompt Injection.

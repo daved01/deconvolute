@@ -2,7 +2,7 @@ import importlib.util
 
 import pytest
 
-from deconvolute.detectors.language.engine import LanguageDetector
+from deconvolute.detectors.content.language.engine import LanguageDetector
 
 # Check if lingua is actually installed in the environment
 HAS_LINGUA = importlib.util.find_spec("lingua") is not None

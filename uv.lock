@@ -133,6 +133,10 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+all = [
+    { name = "lingua-language-detector" },
+    { name = "onnxruntime" },
+]
 language = [
     { name = "lingua-language-detector" },
 ]
@@ -153,12 +157,14 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "lingua-language-detector", marker = "extra == 'all'", specifier = ">=2.1.1" },
     { name = "lingua-language-detector", marker = "extra == 'language'", specifier = ">=2.1.1" },
+    { name = "onnxruntime", marker = "extra == 'all'", specifier = ">=1.16.0" },
     { name = "onnxruntime", marker = "extra == 'ml'", specifier = ">=1.16.0" },
     { name = "pydantic", specifier = ">=2.0" },
     { name = "pydantic-settings", specifier = ">=2.0" },
 ]
-provides-extras = ["language", "ml"]
+provides-extras = ["all", "language", "ml"]
 
 [package.metadata.requires-dev]
 dev = [

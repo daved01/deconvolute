@@ -1,11 +1,11 @@
 import pytest
 
-from deconvolute import Canary
+from deconvolute import CanaryDetector
 
 
 def test_inject_structure() -> None:
     """It should return the modified prompt and the FULL token string."""
-    canary = Canary()
+    canary = CanaryDetector()
     sys_prompt = "System: Be helpful."
 
     modified_prompt, full_token = canary.inject(sys_prompt)
@@ -26,7 +26,7 @@ def test_inject_structure() -> None:
 
 def test_check_safe_exact_match() -> None:
     """It should return threat_detected=False (Safe) if the token is present."""
-    canary = Canary()
+    canary = CanaryDetector()
     _, token = canary.inject("sys")
 
     # Simulate a compliant LLM response
@@ -46,7 +46,7 @@ def test_check_fail_fuzzy_match_spaces() -> None:
     malformed (e.g. spaces). Strict integrity check means any
     deviation is a potential jailbreak or failure.
     """
-    canary = Canary()
+    canary = CanaryDetector()
     # Manually constructed token to simulate injection return
     token_str = "dcv-12345"
     full_token = f"<<Integrity: {token_str}>>"
@@ -63,7 +63,7 @@ def test_check_fail_fuzzy_match_spaces() -> None:
 
 def test_check_fail_fuzzy_match_colon() -> None:
     """It should return unsafe (threat_detected=True) for malformed separators."""
-    canary = Canary()
+    canary = CanaryDetector()
     token_str = "dcv-12345"
     full_token = f"<<Integrity: {token_str}>>"
 
@@ -79,7 +79,7 @@ def test_check_fail_fuzzy_match_colon() -> None:
 
 def test_check_jailbreak_missing_token() -> None:
     """It should return threat_detected=True (Jailbreak) if token is missing."""
-    canary = Canary()
+    canary = CanaryDetector()
     _, token = canary.inject("sys")
 
     # Simulate a jailbroken response (ignoring instructions)
@@ -94,7 +94,7 @@ def test_check_jailbreak_missing_token() -> None:
 
 def test_check_empty_response() -> None:
     """It should flag empty responses as failures."""
-    canary = Canary()
+    canary = CanaryDetector()
     result = canary.check("", token="some-token")
     assert result.threat_detected is True
 
@@ -104,7 +104,7 @@ def test_clean_removes_token() -> None:
     It should remove the full token string and
     its leading whitespace from the output.
     """
-    canary = Canary()
+    canary = CanaryDetector()
     token = "<<Integrity: dcv-123>>"
     response = "Hello world.       <<Integrity: dcv-123>>"
 
@@ -116,7 +116,7 @@ def test_clean_removes_token() -> None:
 
 def test_clean_handles_missing_token() -> None:
     """It should return original text if token is not there (Jailbreak case)."""
-    canary = Canary()
+    canary = CanaryDetector()
     token = "<<Integrity: dcv-123>>"
     response = "Jailbreak active."
 
@@ -127,7 +127,7 @@ def test_clean_handles_missing_token() -> None:
 def test_inject_custom_length() -> None:
     """It should respect custom token_length passed in __init__."""
     custom_len = 32
-    canary = Canary(token_length=custom_len)
+    canary = CanaryDetector(token_length=custom_len)
     _, full_token = canary.inject("sys")
 
     # Format: <<Integrity: dcv-<random> >>
@@ -138,7 +138,7 @@ def test_inject_custom_length() -> None:
 
 def test_inject_empty_prompt() -> None:
     """It should handle empty system prompts gracefully."""
-    canary = Canary()
+    canary = CanaryDetector()
     modified, token = canary.inject("")
 
     # It should just be the injection instruction
@@ -149,7 +149,7 @@ def test_inject_empty_prompt() -> None:
 
 def test_check_partial_match_fail() -> None:
     """It should fail if only a substring of the token is present."""
-    canary = Canary()
+    canary = CanaryDetector()
     _, token = canary.inject("sys")
     # token e.g. "<<Integrity: dcv-1234...>>"
 
@@ -163,7 +163,7 @@ def test_check_partial_match_fail() -> None:
 
 def test_check_case_sensitivity() -> None:
     """It should be case sensitive (strict check)."""
-    canary = Canary()
+    canary = CanaryDetector()
     _, token = canary.inject("sys")
 
     upper_token = token.upper()  # Hex parts might be already mixed case?
@@ -181,13 +181,13 @@ def test_check_case_sensitivity() -> None:
 
 def test_clean_no_op_empty() -> None:
     """Clean should return empty string for empty content."""
-    canary = Canary()
+    canary = CanaryDetector()
     assert canary.clean("", "token") == ""
 
 
 def test_check_missing_token_arg() -> None:
     """It should raise ValueError if 'token' kwarg is missing."""
-    canary = Canary()
+    canary = CanaryDetector()
     with pytest.raises(ValueError, match="requires 'token' argument"):
         canary.check("Response with no token context")
 
@@ -195,7 +195,7 @@ def test_check_missing_token_arg() -> None:
 @pytest.mark.asyncio
 async def test_async_check_flow() -> None:
     """It should support async check execution."""
-    canary = Canary()
+    canary = CanaryDetector()
     _, token = canary.inject("sys")
 
     # Safe case
@@ -207,7 +207,7 @@ async def test_async_check_flow() -> None:
 @pytest.mark.asyncio
 async def test_async_clean_flow() -> None:
     """It should support async cleaning."""
-    canary = Canary()
+    canary = CanaryDetector()
     token = "[Integrity: abc]"
     response = f"Text {token}"
 

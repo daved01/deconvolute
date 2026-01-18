@@ -1,8 +1,8 @@
 from .base import BaseDetector, DetectionResult
-from .canary.engine import CanaryDetector
-from .canary.models import CanaryResult
-from .language.engine import LanguageDetector
-from .language.models import LanguageResult
+from .content.language.engine import LanguageDetector
+from .content.language.models import LanguageResult
+from .integrity.canary.engine import CanaryDetector
+from .integrity.canary.models import CanaryResult
 
 __all__ = [
     "BaseDetector",

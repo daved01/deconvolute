@@ -60,7 +60,7 @@ Detects if the LLM followed your System Prompt instructions (Instructional Adher
 #### Example
 
 ```python
-from deconvolute.detectors import CanaryDetector, CanaryResult, ThreatDetectedError
+from deconvolute import CanaryDetector, CanaryResult, ThreatDetectedError
 
 # Initialize
 # You can customize the token length if needed.
@@ -101,7 +101,7 @@ final_output: str = canary.clean(llm_response, token)
 
 ```python
 import asyncio
-from deconvolute.detectors import CanaryDetector
+from deconvolute import CanaryDetector
 
 async def run_pipeline():
     canary = CanaryDetector()
@@ -130,7 +130,7 @@ Ensures the LLM output matches expected languages. This defends against *Payload
 You can configure the detector with a static list of allowed languages.
 
 ```python
-from deconvolute.detectors import LanguageDetector, LanguageResult, ThreatDetectedError
+from deconvolute import LanguageDetector, LanguageResult, ThreatDetectedError
 
 # Allow English and Spanish.
 # 'strategy' can be 'strict' (default) or 'lenient' (for short text).

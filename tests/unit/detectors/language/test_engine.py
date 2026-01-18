@@ -2,7 +2,7 @@ import sys
 
 import pytest
 
-from deconvolute.detectors.language.engine import LanguageDetector
+from deconvolute import LanguageDetector
 from deconvolute.errors import ConfigurationError
 
 
@@ -13,7 +13,7 @@ def mock_lingua(mocker):
     """
     # 1. Patch the Builder class
     mock_builder = mocker.patch(
-        "deconvolute.detectors.language.engine.LanguageDetectorBuilder"
+        "deconvolute.detectors.content.language.engine.LanguageDetectorBuilder"
     )
 
     # 2. Create the mock detector instance that the builder returns
@@ -56,7 +56,7 @@ def mock_lingua_missing(mocker):
 
     # 2. Patch the global HAS_LINGUA flag in the engine module
     # We must patch this because the import happens before the test runs
-    mocker.patch("deconvolute.detectors.language.engine.HAS_LINGUA", False)
+    mocker.patch("deconvolute.detectors.content.language.engine.HAS_LINGUA", False)
 
 
 def test_init_raises_error_if_lingua_missing(mock_lingua_missing):
@@ -80,7 +80,7 @@ def test_init_optimizes_loaded_languages(mocker, mock_lingua):
     # We need to mock IsoCode639_1 enum lookup since logic uses it
     # We use spec to ensure we mimic existence
     mock_enum = mocker.patch(
-        "deconvolute.detectors.language.engine.IsoCode639_1", spec=["EN", "FR"]
+        "deconvolute.detectors.content.language.engine.IsoCode639_1", spec=["EN", "FR"]
     )
     mock_enum.EN = "ENUM_EN"
     mock_enum.FR = "ENUM_FR"
@@ -110,12 +110,12 @@ def test_init_logs_warning_for_unsupported_language(mocker, mock_lingua):
     """It should log a warning for unsupported languages but load valid ones."""
     # Use spec with only "EN" so "XX" raises AttributeError
     mock_enum = mocker.patch(
-        "deconvolute.detectors.language.engine.IsoCode639_1", spec=["EN"]
+        "deconvolute.detectors.content.language.engine.IsoCode639_1", spec=["EN"]
     )
     # We need to set the value for EN since spec only defines existence, not value
     mock_enum.EN = "ENUM_EN"
 
-    mock_logger = mocker.patch("deconvolute.detectors.language.engine.logger")
+    mock_logger = mocker.patch("deconvolute.detectors.content.language.engine.logger")
 
     _ = LanguageDetector(languages_to_load=["en", "xx"])
 

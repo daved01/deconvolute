@@ -1,9 +1,10 @@
+from typing import Any
 from unittest.mock import Mock
 
 import pytest
 
 from deconvolute.clients.base import BaseProxy
-from deconvolute.detectors.base import BaseDetector
+from deconvolute.detectors.base import BaseDetector, DetectionResult
 
 
 class ConcreteProxy(BaseProxy):
@@ -13,33 +14,33 @@ class ConcreteProxy(BaseProxy):
 
 
 class MockInjector(BaseDetector):
-    def inject(self, prompt):
+    def inject(self, prompt: str) -> tuple[str, str]:
         return prompt, "token"
 
-    def check(self, content, token=None):
-        return None
+    def check(self, content: str, **kwargs: Any) -> DetectionResult:
+        return DetectionResult(threat_detected=False, component="MockInjector")
 
-    async def a_check(self, content, token=None):
-        return None
+    async def a_check(self, content: str, **kwargs: Any) -> DetectionResult:
+        return DetectionResult(threat_detected=False, component="MockInjector")
 
 
 class MockScanner(BaseDetector):
-    def check(self, content, token=None):
-        return True
+    def check(self, content: str, **kwargs: Any) -> DetectionResult:
+        return DetectionResult(threat_detected=False, component="MockScanner")
 
-    async def a_check(self, content, token=None):
-        return True
+    async def a_check(self, content: str, **kwargs: Any) -> DetectionResult:
+        return DetectionResult(threat_detected=False, component="MockScanner")
 
 
 class MockDualDetector(BaseDetector):
-    def inject(self, prompt):
+    def inject(self, prompt: str) -> tuple[str, str]:
         return prompt, "token"
 
-    def check(self, content, token=None):
-        return True
+    def check(self, content: str, **kwargs: Any) -> DetectionResult:
+        return DetectionResult(threat_detected=False, component="MockDualDetector")
 
-    async def a_check(self, content, token=None):
-        return True
+    async def a_check(self, content: str, **kwargs: Any) -> DetectionResult:
+        return DetectionResult(threat_detected=False, component="MockDualDetector")
 
 
 def test_base_proxy_cannot_be_instantiated_directly():

@@ -157,7 +157,7 @@ def _resolve_configuration(
     """
     # Load Defaults if needed
     if detectors is None:
-        detectors: list[BaseDetector] = get_standard_detectors()
+        detectors = get_standard_detectors()
 
     final_key = api_key or os.getenv("DECONVOLUTE_API_KEY")
 

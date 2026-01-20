@@ -1,4 +1,6 @@
 import sys
+from types import ModuleType
+from typing import cast
 from unittest.mock import MagicMock, patch
 
 from deconvolute.core.defaults import get_standard_detectors
@@ -43,7 +45,9 @@ def test_get_standard_detectors_includes_canary():
 
     with patch.dict(sys.modules):
         # Simulate missing language module
-        sys.modules["deconvolute.detectors.content.language.engine"] = None
+        sys.modules["deconvolute.detectors.content.language.engine"] = cast(
+            ModuleType, None
+        )
 
         detectors = get_standard_detectors()
 

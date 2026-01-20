@@ -3,8 +3,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from deconvolute import DeconvoluteError
 from deconvolute.core.orchestrator import (
-    DeconvoluteError,
     _resolve_configuration,
     a_scan,
     guard,
@@ -76,16 +76,18 @@ def test_resolve_config_defaults():
     with patch(
         "deconvolute.core.orchestrator.get_standard_detectors"
     ) as mock_get_defaults:
-        mock_get_defaults.return_value = ["default_detector"]
+        mock_detector = MagicMock(spec=BaseDetector)
+        mock_get_defaults.return_value = [mock_detector]
         result = _resolve_configuration(None, None)
-        assert result == ["default_detector"]
+        assert result == [mock_detector]
         mock_get_defaults.assert_called_once()
 
 
 def test_resolve_config_explicit():
-    detectors = ["custom"]
+    mock_detector = MagicMock(spec=BaseDetector)
+    detectors: list[BaseDetector] = [mock_detector]
     result = _resolve_configuration(detectors, None)
-    assert result == ["custom"]
+    assert result == [mock_detector]
 
 
 def test_resolve_config_api_key_injection(mock_detector):
@@ -138,7 +140,7 @@ def test_guard_unsupported_client(mock_defaults):
         guard(client)
 
 
-def test_guard_openai_import_error(clean_client):
+def test_guard_openai_import_error(clean_client, mock_defaults):
     # Simulate openai being detected by name but failing to import the proxy module
     # This one is hard because guard has a local import for the OpenAIProxy etc.
     original_import = __import__

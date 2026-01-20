@@ -44,6 +44,7 @@ class TestLiveOpenAI:
         print(f"Received: {content}")
 
         # Ensure we got a valid response
+        assert content is not None, "Response content was None"
         assert "42" in content
         # Ensure no Canary artifacts leaked (e.g. )
         assert "dcv_token" not in content

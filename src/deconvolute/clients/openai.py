@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Protocol, cast
 
 from deconvolute.clients.base import BaseProxy
 from deconvolute.detectors.base import BaseDetector
@@ -6,6 +6,10 @@ from deconvolute.errors import DeconvoluteError, ThreatDetectedError
 from deconvolute.utils.logger import get_logger
 
 logger = get_logger()
+
+
+class Injector(Protocol):
+    def inject(self, content: str) -> tuple[str, Any]: ...
 
 
 class OpenAIProxy(BaseProxy):
@@ -107,7 +111,7 @@ class CompletionsProxy:
         self._injectors = injectors
         self._scanners = scanners
 
-    def create(self, *args, **kwargs) -> Any:
+    def create(self, *args: Any, **kwargs: Any) -> Any:
         """
         Wraps the standard `openai.chat.completions.create` method.
 
@@ -157,7 +161,9 @@ class CompletionsProxy:
 
         return response
 
-    def _apply_input_modifiers(self, messages: list[dict], layer_states: dict) -> None:
+    def _apply_input_modifiers(
+        self, messages: list[dict[str, str]], layer_states: dict[BaseDetector, str]
+    ) -> None:
         """
         Internal helper to execute 'Injectors' on the system prompt.
 
@@ -180,13 +186,16 @@ class CompletionsProxy:
 
         for detector in self._injectors:
             # The detector does the logic; we just handle the plumbing.
-            content_with_token, token = detector.inject(content)
+            injector = cast(Injector, detector)
+            content_with_token, token = injector.inject(content)
             layer_states[detector] = token
 
         # Update the message list in-place
         messages[idx]["content"] = content_with_token
 
-    def _apply_output_validators(self, response: Any, layer_states: dict) -> None:
+    def _apply_output_validators(
+        self, response: Any, layer_states: dict[BaseDetector, str]
+    ) -> None:
         """
         Internal helper to execute 'Scanners' on the response object.
 
@@ -274,7 +283,7 @@ class AsyncCompletionsProxy:
         self._injectors = injectors
         self._scanners = scanners
 
-    async def create(self, *args, **kwargs) -> Any:
+    async def create(self, *args: Any, **kwargs: Any) -> Any:
         """
         Wraps the standard `await openai.chat.completions.create` method.
 
@@ -307,7 +316,9 @@ class AsyncCompletionsProxy:
 
         return response
 
-    def _apply_input_modifiers(self, messages: list[dict], layer_states: dict) -> None:
+    def _apply_input_modifiers(
+        self, messages: list[dict[str, str]], layer_states: dict[BaseDetector, str]
+    ) -> None:
         """Duplicated helper to avoid inheritance complexity across Sync/Async."""
         idx = next(
             (i for i, m in enumerate(messages) if m.get("role") == "system"), None
@@ -319,11 +330,14 @@ class AsyncCompletionsProxy:
 
         content = messages[idx]["content"]
         for detector in self._injectors:
-            content_with_token, token = detector.inject(content)
+            injector = cast(Injector, detector)
+            content_with_token, token = injector.inject(content)
             layer_states[detector] = token
         messages[idx]["content"] = content_with_token
 
-    async def _apply_output_validators(self, response: Any, layer_states: dict) -> None:
+    async def _apply_output_validators(
+        self, response: Any, layer_states: dict[BaseDetector, str]
+    ) -> None:
         """Async version of output validator."""
         # Iterate over every generated choice (usually 1, but could be n > 1)
         for choice in response.choices:

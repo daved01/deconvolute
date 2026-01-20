@@ -4,8 +4,7 @@ This section explains core concepts and shows how to use Deconvolute.
 
 ## Core Concepts
 
-TODO: Improve this
-Deconvolute is built around detectors that are applied in layers to achieve a defense-in-depth detection.
+Deconvolute is built around small, deterministic detectors that can be composed and layered to monitor different failure modes in LLM systems. Rather than relying on prompts or heuristics alone, detectors provide explicit signals when model behavior deviates from developer intent.
 
 ### Detectors
 
@@ -34,7 +33,7 @@ High level APIs automatically use the appropriate execution model when available
 
 ## Getting Started
 
-TODO: Add something here
+This section walks through the minimal setup required to start using Deconvolute. It introduces the two primary entry points and shows how detectors fit into a typical LLM or RAG pipeline.
 
 ### Installation
 

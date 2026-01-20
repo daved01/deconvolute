@@ -1,3 +1,12 @@
+## [0.1.0a6] - 2026-01-20
+
+### 🚀 Features
+
+- Implement core orchestration layer and client proxies (#7)
+
+### ⚙️ Miscellaneous Tasks
+
+- Refactor of detectors into namespaces (#6)
 ## [0.1.0a5] - 2026-01-16
 
 ### 🚀 Features
@@ -8,6 +17,7 @@
 
 - Refactor into new structure and add better tests (#4)
 - Update links
+- Prepare release 0.1.0a5
 ## [0.1.0a4] - 2026-01-13
 
 ### 🚀 Features

@@ -1,0 +1,1 @@
+We take security seriously. If you discover a vulnerability, please report it via email to security@deconvoluteai.com. Do not open a public issue.

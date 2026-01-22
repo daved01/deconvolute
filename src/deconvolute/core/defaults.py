@@ -23,6 +23,4 @@ def get_scan_defaults() -> list[BaseDetector]:
     Returns the standard suite of defenses for static content scanning.
     Optimized for deep inspection of prompts or documents.
     """
-    detectors = [SignatureDetector()]
-
-    return detectors
+    return [SignatureDetector()]

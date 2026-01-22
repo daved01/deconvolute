@@ -62,7 +62,7 @@ class SignatureDetector(BaseDetector):
 
         self._load_rules()
 
-    def _load_rules(self):
+    def _load_rules(self) -> None:
         """
         Compiles the local signature rules from disk.
 

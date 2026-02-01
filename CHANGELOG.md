@@ -1,3 +1,8 @@
+## [0.1.0a9] - 2026-02-01
+
+### 🚀 Features
+
+- Improve model imports (#12)
 ## [0.1.0a8] - 2026-01-29
 
 ### 🚀 Features
@@ -12,6 +17,7 @@
 ### ⚙️ Miscellaneous Tasks
 
 - Update badges
+- Prepare v0.1.0a8
 ## [0.1.0a7] - 2026-01-22
 
 ### 🚀 Features

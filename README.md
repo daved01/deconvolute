@@ -7,7 +7,7 @@
 
 Detect adversarial prompts, unsafe RAG content, and model output failures in LLM pipelines. Wrap clients or scan text to add a security layer to your AI system in minutes.
 
-⚠️ **Alpha development version** — usable but limited, API may change
+⚠️ **Alpha version under active development. API might change.**
 
 ## Protect Your LLM Systems from Adversarial Prompts
 
@@ -15,7 +15,7 @@ Deconvolute is a security SDK for large language models that detects misaligned 
 - `scan()`: validate any text before it enters your system
 - `guard()`: wrap LLM clients to enforce runtime safety
 
-Both functions use pre-configured, carefully selected detectors that cover most prompt injection, malicious compliance, and poisoned RAG attacks out of the box. You get deterministic signals for potential threats and decide how to respond—block, log, discard, or trigger custom logic.
+Both functions use pre-configured, carefully selected detectors that cover most prompt injection, malicious compliance, and poisoned RAG attacks out of the box. You get deterministic signals for potential threats and decide how to respond, for example by blocking, logging, discarding, or triggering custom logic.
 
 
 ## Quick Start

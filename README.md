@@ -1,4 +1,4 @@
-# Deconvolute: The RAG Security SDK
+# Deconvolute: The MCP Application Firewall
 
 [![CI](https://github.com/deconvolute-labs/deconvolute/actions/workflows/ci.yml/badge.svg)](https://github.com/deconvolute-labs/deconvolute/actions/workflows/ci.yml)
 [![License](https://img.shields.io/pypi/l/deconvolute.svg)](https://pypi.org/project/deconvolute/)
@@ -7,7 +7,8 @@
 
 Detect adversarial prompts, unsafe RAG content, and model output failures in LLM pipelines. Wrap clients or scan text to add a security layer to your AI system in minutes.
 
-⚠️ **Alpha version under active development. API might change.**
+> [!WARNING]
+> Alpha version under active development. API might change.
 
 ## Protect Your LLM Systems from Adversarial Prompts
 

@@ -1,6 +1,6 @@
 from typing import Any
 
-from deconvolute.detectors.base import BaseDetector
+from deconvolute.scanners.base import BaseScanner
 
 
 class BaseProxy:
@@ -8,23 +8,23 @@ class BaseProxy:
     Abstract Base Class for all Client Proxies.
 
     This class provides the core infrastructure for storing state (client, keys,
-    detectors) and transparently delegating attributes. It organizes detectors based
+    scanners) and transparently delegating attributes. It organizes scanners based
     on their capabilities (Injecting vs. Scanning).
 
     Attributes:
         _client (Any): The original, wrapped LLM client instance.
         api_key (str | None): The Deconvolute API Key.
-        _detectors (list[BaseDetector]): The full list of active security detectors.
-        _injectors (list[BaseDetector]): Detectors that implement 'inject'.
+        _all_scanners (list[BaseScanner]): The full list of active security scanners.
+        _injectors (list[BaseScanner]): Scanners that implement 'inject'.
             Used to modify the input prompt (e.g. Canary).
-        _scanners (list[BaseDetector]): Detectors that implement 'check'.
+        _scanners (list[BaseScanner]): Scanners that implement 'check'.
             Used to scan the output response (e.g. Language, Canary).
     """
 
     def __init__(
         self,
         client: Any,
-        detectors: list[BaseDetector],
+        scanners: list[BaseScanner],
         api_key: str | None = None,
     ):
         """
@@ -32,7 +32,7 @@ class BaseProxy:
 
         Args:
             client: The original LLM client instance.
-            detectors: A strict list of detectors. The factory (guard) is responsible
+            scanners: A strict list of scanners. The factory (guard) is responsible
                 for resolving defaults before calling this.
             api_key: Optional Deconvolute API key.
         """
@@ -44,21 +44,21 @@ class BaseProxy:
 
         self._client = client
         self.api_key = api_key
-        self._detectors = detectors
+        self._all_scanners = scanners
 
         # Capability-Based Sorting
 
         # Injectors
-        # Detectors that modify the state/prompt BEFORE execution.
+        # Scanners that modify the state/prompt BEFORE execution.
         # Corresponds to the 'inject()' method.
-        self._injectors = [d for d in self._detectors if hasattr(d, "inject")]
+        self._injectors = [d for d in self._all_scanners if hasattr(d, "inject")]
 
         # Scanners
-        # Detectors that analyze text. In the context of this proxy, they are used
+        # Scanners that analyze text. In the context of this proxy, they are used
         # to validate the LLM response. In other contexts (like scan()), they might
         # check documents.
         # Corresponds to the 'check()' method.
-        self._scanners = [d for d in self._detectors if hasattr(d, "check")]
+        self._scanners = [d for d in self._all_scanners if hasattr(d, "check")]
 
     def __getattr__(self, name: str) -> Any:
         """

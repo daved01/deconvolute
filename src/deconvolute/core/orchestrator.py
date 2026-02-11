@@ -2,8 +2,8 @@ import os
 from typing import TypeVar
 
 from deconvolute.core.defaults import get_guard_defaults, get_scan_defaults
-from deconvolute.detectors.base import BaseDetector, DetectionResult
 from deconvolute.errors import DeconvoluteError
+from deconvolute.scanners.base import BaseScanner, ScanResult
 from deconvolute.utils.logger import get_logger
 
 logger = get_logger()
@@ -13,7 +13,7 @@ T = TypeVar("T")
 
 
 def guard(
-    client: T, detectors: list[BaseDetector] | None = None, api_key: str | None = None
+    client: T, scanners: list[BaseScanner] | None = None, api_key: str | None = None
 ) -> T:
     """
     Wraps an LLM client with Deconvolute security defenses.
@@ -25,11 +25,11 @@ def guard(
     Args:
         client: The original LLM client instance. Currently supports objects from
             the 'openai' library (Sync and Async).
-        detectors: An optional list of configured detector instances.
+        scanners: An optional list of configured scanner instances.
             If None (default), the Standard Defense Suite is loaded (Canary + Language).
-            If a list is provided, only those detectors are used (Strict Mode).
+            If a list is provided, only those scanners are used (Strict Mode).
         api_key: The Deconvolute API key. If provided, it is injected into any
-            detector that requires it but is missing configuration.
+            scanner that requires it but is missing configuration.
 
     Returns:
         A Proxy object that mimics the interface of the original client but
@@ -40,11 +40,11 @@ def guard(
             client library is not installed in the environment.
     """
     # Load Defaults if needed
-    if detectors is None:
-        detectors = get_guard_defaults()
+    if scanners is None:
+        scanners = get_guard_defaults()
 
     # Inject API Keys
-    detectors = _resolve_configuration(detectors, api_key)
+    scanners = _resolve_configuration(scanners, api_key)
 
     # Client Inspection
     # We use string inspection to avoid importing libraries that might not be installed.
@@ -64,12 +64,12 @@ def guard(
                 logger.debug(
                     f"Deconvolute: Wrapping Async OpenAI client ({client_type})"
                 )
-                return AsyncOpenAIProxy(client, detectors, api_key)  # type: ignore
+                return AsyncOpenAIProxy(client, scanners, api_key)  # type: ignore
             else:
                 logger.debug(
                     f"Deconvolute: Wrapping Sync OpenAI client ({client_type})"
                 )
-                return OpenAIProxy(client, detectors, api_key)  # type: ignore
+                return OpenAIProxy(client, scanners, api_key)  # type: ignore
 
         except ImportError as e:
             # This handles the case where the object claims to be from 'openai'
@@ -88,11 +88,11 @@ def guard(
 
 def scan(
     content: str,
-    detectors: list[BaseDetector] | None = None,
+    scanners: list[BaseScanner] | None = None,
     api_key: str | None = None,
-) -> DetectionResult:
+) -> ScanResult:
     """
-    Synchronously scans a string for threats using the configured detectors.
+    Synchronously scans a string for threats using the configured scanners.
 
     This function is designed for 'Content' scanning in RAG pipelines (e.g. checking
     retrieved documents) or tool outputs. It skips 'Integrity' checks (like Canary)
@@ -100,36 +100,37 @@ def scan(
 
     Args:
         content: The text string to analyze.
-        detectors: Optional list of detectors. If None, uses Standard Suite.
+        scanners: Optional list of scanners. If None, uses Standard Suite.
         api_key: Optional Deconvolute API key.
 
     Returns:
-        DetectionResult: The result of the first detector that found a threat,
+        ScanResult: The result of the first scanner that found a threat,
         or a clean result if all passed.
     """
     # Load Defaults if needed
-    if detectors is None:
-        detectors = get_scan_defaults()
+    if scanners is None:
+        scanners = get_scan_defaults()
 
     # Resolve config
-    detectors = _resolve_configuration(detectors, api_key)
+    scanners = _resolve_configuration(scanners, api_key)
 
-    # Filter for scanners (detectors with check())
-    scanners = [d for d in detectors if hasattr(d, "check")]
+    # Filter for scanners (scanners with check())
+    # Note: All BaseScanner instances should have check()
+    active_scanners = [d for d in scanners if hasattr(d, "check")]
 
-    for detector in scanners:
-        result = detector.check(content)
+    for scanner in active_scanners:
+        result = scanner.check(content)
         if result.threat_detected:
             return result
 
-    return DetectionResult(threat_detected=False, component="Scanner")
+    return ScanResult(threat_detected=False, component="Scanner")
 
 
 async def a_scan(
     content: str,
-    detectors: list[BaseDetector] | None = None,
+    scanners: list[BaseScanner] | None = None,
     api_key: str | None = None,
-) -> DetectionResult:
+) -> ScanResult:
     """
     Asynchronously scans a string for threats.
 
@@ -137,40 +138,39 @@ async def a_scan(
     for high-throughput async pipelines (FastAPI, LangChain).
     """
     # Load Defaults if needed
-    if detectors is None:
-        detectors = get_scan_defaults()
+    if scanners is None:
+        scanners = get_scan_defaults()
 
-    detectors = _resolve_configuration(detectors, api_key)
-    scanners = [d for d in detectors if hasattr(d, "check")]
+    scanners = _resolve_configuration(scanners, api_key)
+    active_scanners = [d for d in scanners if hasattr(d, "check")]
 
-    for detector in scanners:
-        result = await detector.a_check(content)
+    for scanner in active_scanners:
+        result = await scanner.a_check(content)
         if result.threat_detected:
             return result
 
-    return DetectionResult(threat_detected=False, component="Scanner")
+    return ScanResult(threat_detected=False, component="Scanner")
 
 
 def _resolve_configuration(
-    detectors: list[BaseDetector], api_key: str | None
-) -> list[BaseDetector]:
+    scanners: list[BaseScanner], api_key: str | None
+) -> list[BaseScanner]:
     """
-    Internal helper to inject API keys into configured detectors.
+    Internal helper to inject API keys into configured scanners.
 
     Args:
-        detectors: The list of detectors (must not be None).
+        scanners: The list of scanners (must not be None).
         api_key: The user-provided API key (or None).
 
     Returns:
-        The configured detectors with keys injected.
+        The configured scanners with keys injected.
     """
     final_key = api_key or os.getenv("DECONVOLUTE_API_KEY")
 
-    # We only inject if the key is available and the detector is unconfigured.
+    # We only inject if the key is available and the scanner is unconfigured.
     if final_key:
-        for d in detectors:
-            if hasattr(d, "api_key") and getattr(d, "api_key", None) is None:
-                d.api_key = final_key
+        for s in scanners:
+            if hasattr(s, "api_key") and getattr(s, "api_key", None) is None:
+                s.api_key = final_key
 
-    return detectors
-    return detectors
+    return scanners

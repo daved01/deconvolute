@@ -2,11 +2,11 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
-from deconvolute.detectors.base import BaseDetector
 from deconvolute.errors import ConfigurationError
+from deconvolute.scanners.base import BaseScanner
 from deconvolute.utils.logger import get_logger
 
-from .models import LanguageResult
+from .models import LanguageScanResult
 
 try:
     from lingua import IsoCode639_1, Language, LanguageDetectorBuilder
@@ -18,11 +18,11 @@ except ImportError:
 logger = get_logger()
 
 
-class LanguageDetector(BaseDetector):
+class LanguageScanner(BaseScanner):
     """
-    Detects language inconsistencies to prevent Payload Splitting attacks.
+    Scans for language inconsistencies to prevent Payload Splitting attacks.
 
-    This detector can verify if the output language matches:
+    This scanner can verify if the output language matches:
     1. A specific allow-list (Policy Mode).
     2. The language of the input prompt (Correspondence Mode).
 
@@ -50,7 +50,7 @@ class LanguageDetector(BaseDetector):
         """
         if not HAS_LINGUA:
             raise ConfigurationError(
-                "LanguageDetector requires the 'lingua' library.\n"
+                "LanguageScanner requires the 'lingua' library.\n"
                 "Please install it with: pip install deconvolute[language]"
             )
 
@@ -81,7 +81,7 @@ class LanguageDetector(BaseDetector):
                 *selected_languages
             ).build()
             logger.debug(
-                f"LanguageDetector loaded in lightweight mode: {languages_to_load}"
+                f"LanguageScanner loaded in lightweight mode: {languages_to_load}"
             )
 
         else:
@@ -110,7 +110,7 @@ class LanguageDetector(BaseDetector):
         # confidence unless it returns None.
         return iso_code, 1.0
 
-    def check(self, content: str, **kwargs: Any) -> LanguageResult:
+    def check(self, content: str, **kwargs: Any) -> LanguageScanResult:
         """
         Checks if content matches allowed languages or reference text.
 
@@ -128,12 +128,12 @@ class LanguageDetector(BaseDetector):
 
             # If we successfully detected both languages and they differ
             if detected_code and ref_code and detected_code != ref_code:
-                return LanguageResult(
+                return LanguageScanResult(
                     threat_detected=True,
                     detected_language=detected_code,
                     confidence=confidence,
                     allowed_languages=[ref_code] + self.allowed_codes,
-                    component="LanguageDetector",
+                    component="LanguageScanner",
                     metadata={
                         "reason": "correspondence_mismatch",
                         "reference_language": ref_code,
@@ -143,24 +143,24 @@ class LanguageDetector(BaseDetector):
         # Check Allowlist (Policy)
         if self.allowed_codes and detected_code:
             if detected_code not in self.allowed_codes:
-                return LanguageResult(
+                return LanguageScanResult(
                     threat_detected=True,
                     detected_language=detected_code,
                     confidence=confidence,
                     allowed_languages=self.allowed_codes,
-                    component="LanguageDetector",
+                    component="LanguageScanner",
                     metadata={"reason": "policy_violation"},
                 )
 
-        return LanguageResult(
+        return LanguageScanResult(
             threat_detected=False,
             detected_language=detected_code,
             confidence=confidence,
             allowed_languages=self.allowed_codes,
-            component="LanguageDetector",
+            component="LanguageScanner",
         )
 
-    async def a_check(self, content: str, **kwargs: Any) -> LanguageResult:
+    async def a_check(self, content: str, **kwargs: Any) -> LanguageScanResult:
         """Async version of check() using a thread pool."""
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(

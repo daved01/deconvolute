@@ -10,7 +10,7 @@ from deconvolute.core.orchestrator import (
     guard,
     scan,
 )
-from deconvolute.detectors.base import BaseDetector, DetectionResult
+from deconvolute.scanners.base import BaseScanner, ScanResult
 
 
 @pytest.fixture
@@ -30,31 +30,29 @@ def mock_scan_defaults():
 
 
 @pytest.fixture
-def mock_detector():
-    """A clean detector that finds no threats."""
-    d = MagicMock(spec=BaseDetector)
-    d.check.return_value = DetectionResult(
-        threat_detected=False, component="MockDetector"
-    )
+def mock_scanner():
+    """A clean scanner that finds no threats."""
+    d = MagicMock(spec=BaseScanner)
+    d.check.return_value = ScanResult(threat_detected=False, component="MockScanner")
     d.a_check = AsyncMock(
-        return_value=DetectionResult(threat_detected=False, component="MockDetector")
+        return_value=ScanResult(threat_detected=False, component="MockScanner")
     )
     return d
 
 
 @pytest.fixture
-def mock_threat_detector():
-    """A detector that ALWAYS finds a threat."""
-    d = MagicMock(spec=BaseDetector)
-    d.check.return_value = DetectionResult(
+def mock_threat_scanner():
+    """A scanner that ALWAYS finds a threat."""
+    d = MagicMock(spec=BaseScanner)
+    d.check.return_value = ScanResult(
         threat_detected=True,
-        component="ThreatDetector",
+        component="ThreatScanner",
         metadata={"details": "Bad content"},
     )
     d.a_check = AsyncMock(
-        return_value=DetectionResult(
+        return_value=ScanResult(
             threat_detected=True,
-            component="ThreatDetector",
+            component="ThreatScanner",
             metadata={"details": "Bad content"},
         )
     )
@@ -81,25 +79,25 @@ def async_clean_client():
 
 
 def test_resolve_config_explicit():
-    mock_detector = MagicMock(spec=BaseDetector)
-    detectors: list[BaseDetector] = [mock_detector]
-    result = _resolve_configuration(detectors, None)
-    assert result == [mock_detector]
+    mock_scanner = MagicMock(spec=BaseScanner)
+    scanners: list[BaseScanner] = [mock_scanner]
+    result = _resolve_configuration(scanners, None)
+    assert result == [mock_scanner]
 
 
-def test_resolve_config_api_key_injection(mock_detector):
-    # Detector has no api_key
-    mock_detector.api_key = None
-    assert mock_detector.api_key is None
+def test_resolve_config_api_key_injection(mock_scanner):
+    # Scanner has no api_key
+    mock_scanner.api_key = None
+    assert mock_scanner.api_key is None
 
-    _resolve_configuration([mock_detector], "secret-key")
-    assert mock_detector.api_key == "secret-key"
+    _resolve_configuration([mock_scanner], "secret-key")
+    assert mock_scanner.api_key == "secret-key"
 
 
-def test_resolve_config_api_key_no_overwrite(mock_detector):
-    mock_detector.api_key = "existing-key"
-    _resolve_configuration([mock_detector], "new-key")
-    assert mock_detector.api_key == "existing-key"
+def test_resolve_config_api_key_no_overwrite(mock_scanner):
+    mock_scanner.api_key = "existing-key"
+    _resolve_configuration([mock_scanner], "new-key")
+    assert mock_scanner.api_key == "existing-key"
 
 
 def test_guard_wrapper_sync(clean_client, mock_guard_defaults):
@@ -141,14 +139,14 @@ def test_scan_uses_scan_defaults():
     with patch(
         "deconvolute.core.orchestrator.get_scan_defaults"
     ) as mock_get_scan_defaults:
-        mock_detector = MagicMock()
-        mock_detector.check.return_value = MagicMock(threat_detected=False)
-        mock_get_scan_defaults.return_value = [mock_detector]
+        mock_scanner = MagicMock()
+        mock_scanner.check.return_value = MagicMock(threat_detected=False)
+        mock_get_scan_defaults.return_value = [mock_scanner]
 
-        scan("test content", detectors=None)
+        scan("test content", scanners=None)
 
         mock_get_scan_defaults.assert_called_once()
-        mock_detector.check.assert_called_once()
+        mock_scanner.check.assert_called_once()
 
 
 def test_guard_uses_guard_defaults():
@@ -163,7 +161,7 @@ def test_guard_uses_guard_defaults():
         mock_get_guard_defaults.return_value = []
 
         try:
-            guard(mock_client, detectors=None)
+            guard(mock_client, scanners=None)
         except Exception:  # noqa
             pass
 
@@ -199,36 +197,36 @@ def test_guard_openai_import_error(clean_client, mock_guard_defaults):
                 guard(clean_client)
 
 
-def test_scan_threat_detected(mock_threat_detector):
-    result = scan("some content", detectors=[mock_threat_detector])
+def test_scan_threat_detected(mock_threat_scanner):
+    result = scan("some content", scanners=[mock_threat_scanner])
     assert result.threat_detected is True
     assert result.metadata.get("details") == "Bad content"
 
 
-def test_scan_clean(mock_detector):
-    result = scan("safe content", detectors=[mock_detector])
+def test_scan_clean(mock_scanner):
+    result = scan("safe content", scanners=[mock_scanner])
     assert result.threat_detected is False
     assert result.component == "Scanner"
 
 
-def test_scan_calls_checks(mock_detector):
-    scan("test", detectors=[mock_detector])
-    mock_detector.check.assert_called_once_with("test")
+def test_scan_calls_checks(mock_scanner):
+    scan("test", scanners=[mock_scanner])
+    mock_scanner.check.assert_called_once_with("test")
 
 
 @pytest.mark.asyncio
-async def test_a_scan_threat_detected(mock_threat_detector):
-    result = await a_scan("some content", detectors=[mock_threat_detector])
+async def test_a_scan_threat_detected(mock_threat_scanner):
+    result = await a_scan("some content", scanners=[mock_threat_scanner])
     assert result.threat_detected is True
 
 
 @pytest.mark.asyncio
-async def test_a_scan_clean(mock_detector):
-    result = await a_scan("safe content", detectors=[mock_detector])
+async def test_a_scan_clean(mock_scanner):
+    result = await a_scan("safe content", scanners=[mock_scanner])
     assert result.threat_detected is False
 
 
 @pytest.mark.asyncio
-async def test_a_scan_calls_checks(mock_detector):
-    await a_scan("test", detectors=[mock_detector])
-    mock_detector.a_check.assert_called_once_with("test")
+async def test_a_scan_calls_checks(mock_scanner):
+    await a_scan("test", scanners=[mock_scanner])
+    mock_scanner.a_check.assert_called_once_with("test")

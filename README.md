@@ -16,7 +16,7 @@ Deconvolute is a security SDK for large language models that detects misaligned 
 - `scan()`: validate any text before it enters your system
 - `guard()`: wrap LLM clients to enforce runtime safety
 
-Both functions use pre-configured, carefully selected detectors that cover most prompt injection, malicious compliance, and poisoned RAG attacks out of the box. You get deterministic signals for potential threats and decide how to respond, for example by blocking, logging, discarding, or triggering custom logic.
+Both functions use pre-configured, carefully selected scanners that cover most prompt injection, malicious compliance, and poisoned RAG attacks out of the box. You get deterministic signals for potential threats and decide how to respond, for example by blocking, logging, discarding, or triggering custom logic.
 
 
 ## Quick Start
@@ -69,26 +69,26 @@ For full examples, advanced configuration, and integration patterns, see the [Us
 The SDK supports three primary usage patterns:
 
 ### 1. Wrap LLM clients
-Apply detectors to the outputs of an API client (for example, OpenAI or other LLMs). This allows you to catch issues like lost system instructions or language violations in real time, before the output is returned to your application.
+Apply scanners to the outputs of an API client (for example, OpenAI or other LLMs). This allows you to catch issues like lost system instructions or language violations in real time, before the output is returned to your application.
 
 ### 2. Scan untrusted text
 Check any text string before it enters your pipeline, such as documents retrieved for a RAG system. This can catch poisoned content early, preventing malicious data from influencing downstream responses.
 
-### 3. Layer detectors for defense in depth
-Combine multiple detectors to monitor different failure modes simultaneously. Each detector targets a specific threat, and using them together gives broader coverage and richer control over the behavior of your models.
+### 3. Layer scanners for defense in depth
+Combine multiple scanners to monitor different failure modes simultaneously. Each scanner targets a specific threat, and using them together gives broader coverage and richer control over the behavior of your models.
 
 For detailed examples, configuration options, and integration patterns, see the [Usage Guide & API Documentation](/docs/Readme.md)￼
 
 
 ## Development Status
 
-Deconvolute is currently in alpha development. Some detectors are experimental and not yet red-teamed, while others are functionally complete and safe to try in controlled environments.
+Deconvolute is currently in alpha development. Some scanners are experimental and not yet red-teamed, while others are functionally complete and safe to try in controlled environments.
 
-| Detector | Domain | Status | Description |
+| Scanner | Domain | Status | Description |
 | :--- | :--- | :--- | :--- |
-| `CanaryDetector` | Integrity | ![Status: Experimental](https://img.shields.io/badge/Status-Experimental-orange) | Active integrity checks using cryptographic tokens to detect jailbreaks. |
-| `LanguageDetector` | Content | ![Status: Experimental](https://img.shields.io/badge/Status-Experimental-orange) | Ensures output language matches expectations and prevents payload-splitting attacks.
-| `SignatureDetector` | Content | ![Status: Experimental](https://img.shields.io/badge/Status-Experimental-orange) | Detects known prompt injection patterns, poisoned RAG content, and sensitive data via signature matching.
+| `CanaryScanner` | Integrity | ![Status: Experimental](https://img.shields.io/badge/Status-Experimental-orange) | Active integrity checks using cryptographic tokens to detect jailbreaks. |
+| `LanguageScanner` | Content | ![Status: Experimental](https://img.shields.io/badge/Status-Experimental-orange) | Ensures output language matches expectations and prevents payload-splitting attacks.
+| `SignatureScanner` | Content | ![Status: Experimental](https://img.shields.io/badge/Status-Experimental-orange) | Detects known prompt injection patterns, poisoned RAG content, and sensitive data via signature matching.
 
 
 **Status guide:**
@@ -97,18 +97,18 @@ Deconvolute is currently in alpha development. Some detectors are experimental a
 - Experimental: Functionally complete and unit-tested, but not yet fully validated in production.
 - Validated: Empirically tested with benchmarked results.
 
-For reproducible experiments and detailed performance results of detectors and layered defenses, see the [benchmarks repo](https://github.com/deconvolute-labs/benchmarks).
+For reproducible experiments and detailed performance results of scanners and layered defenses, see the [benchmarks repo](https://github.com/deconvolute-labs/benchmarks).
 
 
 ## Advanced Signature Generation
 
-For teams that want custom, high-precision signature rules, Deconvolute integrates seamlessly with Yara-Gen￼. You can generate YARA rules from adversarial and benign text datasets, then load them into Deconvolute’s signature-based detector to extend coverage or tailor defenses to your environment.
+For teams that want custom, high-precision signature rules, Deconvolute integrates seamlessly with Yara-Gen￼. You can generate YARA rules from adversarial and benign text datasets, then load them into Deconvolute’s signature-based scanner to extend coverage or tailor defenses to your environment.
 
 ```python
-from deconvolute import scan, SignatureDetector
+from deconvolute import scan, SignatureScanner
 
 # Load custom YARA rules generated with Yara-Gen
-result = scan(content="Some input text", detectors=[SignatureDetector(rules_path="./custom_rules.yar")])
+result = scan(content="Some input text", scanners=[SignatureScanner(rules_path="./custom_rules.yar")])
 
 if result.threat_detected:
     print(f"Threat detected: {result.component}")
@@ -117,7 +117,7 @@ if result.threat_detected:
 ## Links & Next Steps
 - [Usage Guide & API Documentation](docs/Readme.md): Detailed code examples, configuration options, and integration patterns.
 - [The Hidden Attack Surfaces of RAG](https://deconvoluteai.com/blog/attack-surfaces-rag?utm_source=github.com&utm_medium=readme&utm_campaign=deconvolute): Overview of RAG attack surfaces and security considerations.
-- [Benchmarks of Detectors](https://github.com/daved01/deconvolute-benchmark): Reproducible experiments and layered detector performance results.
+- [Benchmarks of Scanners](https://github.com/deconvolute-labs/benchmarks): Reproducible experiments and layered scanner performance results.
 - CONTRIBUTING.md: Guidelines for building, testing, or contributing to the project.
 - [Yara-gen](https://github.com/deconvolute-labs/yara-gen): CLI tool to generate YARA rules based on adversarial and benign text samples.
 

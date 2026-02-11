@@ -31,7 +31,7 @@ dependencies = [
 ]
 [project.urls]
 Homepage = "https://deconvoluteai.com"
-Issues = "https://github.com/daved01/deconvolute/issues"
+Issues = "https://github.com/deconvolute-labs/deconvolute/issues"
 
 
 [dependency-groups]

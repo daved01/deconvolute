@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 from deconvolute.constants import CANARY_INTEGRITY_INSTRUCTION, CANARY_TEMPLATE_FORMAT
+from deconvolute.models.security import SecurityComponent, SecurityStatus
 from deconvolute.scanners.base import BaseScanner
 from deconvolute.utils.logger import get_logger
 
@@ -76,16 +77,26 @@ class CanaryScanner(BaseScanner):
         if not content:
             # Empty response is a failure of adherence
             return CanaryScanResult(
-                threat_detected=True, component="CanaryScanner", token_found=None
+                status=SecurityStatus.UNSAFE,
+                component=SecurityComponent.CANARY_SCANNER,
+                token_found=None,
             )
 
         # Strict Check: The model must reproduce the phrase exactly.
         if token in content:
-            return CanaryScanResult(threat_detected=False, token_found=token)
+            return CanaryScanResult(
+                status=SecurityStatus.SAFE,
+                component=SecurityComponent.CANARY_SCANNER,
+                token_found=token,
+            )
 
         # We assume Jailbreak if exact match fails.
         logger.warning(f"Integrity check failed. Token missing: {token}")
-        return CanaryScanResult(threat_detected=True, token_found=None)
+        return CanaryScanResult(
+            status=SecurityStatus.UNSAFE,
+            component=SecurityComponent.CANARY_SCANNER,
+            token_found=None,
+        )
 
     def clean(self, content: str, token: str) -> str:
         """

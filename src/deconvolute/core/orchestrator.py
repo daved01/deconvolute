@@ -3,7 +3,12 @@ from typing import TypeVar
 
 from deconvolute.core.defaults import get_guard_defaults, get_scan_defaults
 from deconvolute.errors import DeconvoluteError
-from deconvolute.scanners.base import BaseScanner, ScanResult
+from deconvolute.models.security import (
+    SecurityComponent,
+    SecurityResult,
+    SecurityStatus,
+)
+from deconvolute.scanners.base import BaseScanner
 from deconvolute.utils.logger import get_logger
 
 logger = get_logger()
@@ -90,7 +95,7 @@ def scan(
     content: str,
     scanners: list[BaseScanner] | None = None,
     api_key: str | None = None,
-) -> ScanResult:
+) -> SecurityResult:
     """
     Synchronously scans a string for threats using the configured scanners.
 
@@ -104,7 +109,7 @@ def scan(
         api_key: Optional Deconvolute API key.
 
     Returns:
-        ScanResult: The result of the first scanner that found a threat,
+        SecurityResult: The result of the first scanner that found a threat,
         or a clean result if all passed.
     """
     # Load Defaults if needed
@@ -120,17 +125,19 @@ def scan(
 
     for scanner in active_scanners:
         result = scanner.check(content)
-        if result.threat_detected:
+        if not result.safe:
             return result
 
-    return ScanResult(threat_detected=False, component="Scanner")
+    return SecurityResult(
+        status=SecurityStatus.SAFE, component=SecurityComponent.SCANNER
+    )
 
 
 async def a_scan(
     content: str,
     scanners: list[BaseScanner] | None = None,
     api_key: str | None = None,
-) -> ScanResult:
+) -> SecurityResult:
     """
     Asynchronously scans a string for threats.
 
@@ -146,10 +153,12 @@ async def a_scan(
 
     for scanner in active_scanners:
         result = await scanner.a_check(content)
-        if result.threat_detected:
+        if not result.safe:
             return result
 
-    return ScanResult(threat_detected=False, component="Scanner")
+    return SecurityResult(
+        status=SecurityStatus.SAFE, component=SecurityComponent.SCANNER
+    )
 
 
 def _resolve_configuration(

@@ -2,6 +2,7 @@ import importlib.util
 
 import pytest
 
+from deconvolute.models.security import SecurityStatus
 from deconvolute.scanners.content.language.engine import LanguageScanner
 
 # Check if lingua is actually installed in the environment
@@ -19,7 +20,7 @@ def test_real_lingua_integration_french_detection():
     # This should return a real result from Lingua
     result = scanner.check("Bonjour tout le monde")
 
-    assert result.threat_detected is False
+    assert result.status == SecurityStatus.SAFE
     assert result.detected_language == "fr"
     # Lingua returns 1.0 for deterministic short text usually
     assert result.confidence > 0.8
@@ -35,7 +36,7 @@ def test_real_lingua_integration_policy_violation():
 
     result = scanner.check("Bonjour")
 
-    assert result.threat_detected is True
+    assert result.status == SecurityStatus.UNSAFE
     assert result.detected_language == "fr"
     assert result.metadata["reason"] == "policy_violation"
 
@@ -53,6 +54,6 @@ def test_real_lingua_integration_correspondence_check():
         content="Bonjour", reference_text="Hello there, how are you doing today?"
     )
 
-    assert result.threat_detected is True
+    assert result.status == SecurityStatus.UNSAFE
     assert result.metadata["reason"] == "correspondence_mismatch"
     assert result.metadata["reference_language"] == "en"

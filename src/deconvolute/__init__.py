@@ -1,9 +1,9 @@
 from .core.orchestrator import a_scan, llm_guard, scan
-from .errors import DeconvoluteError, ThreatDetectedError
-from .scanners.base import ScanResult
+from .errors import DeconvoluteError, SecurityResultError
+from .models.security import SecurityResult
 from .scanners.content import (
     LanguageScanner,
-    LanguageScanResult,
+    LanguageSecurityResult,
     SignatureScanner,
 )
 from .scanners.integrity import CanaryScanner, CanaryScanResult
@@ -16,10 +16,10 @@ __all__ = [
     "a_scan",
     "CanaryScanner",
     "CanaryScanResult",
-    "ScanResult",
+    "SecurityResult",
     "LanguageScanner",
-    "LanguageScanResult",
+    "LanguageSecurityResult",
     "SignatureScanner",
-    "ThreatDetectedError",
+    "SecurityResultError",
     "DeconvoluteError",
 ]

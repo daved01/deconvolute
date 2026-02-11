@@ -7,30 +7,43 @@ from deconvolute.clients.openai import (
     AsyncOpenAIProxy,
     OpenAIProxy,
 )
-from deconvolute.errors import ThreatDetectedError
-from deconvolute.scanners.base import BaseScanner, ScanResult
+from deconvolute.errors import SecurityResultError
+from deconvolute.models.security import (
+    SecurityComponent,
+    SecurityResult,
+    SecurityStatus,
+)
+from deconvolute.scanners.base import BaseScanner
 
 
 class MockInjector(BaseScanner):
     def inject(self, prompt: str) -> tuple[str, str]:
         return prompt + " [INJECTED]", "token_123"
 
-    def check(self, content: str, **kwargs: Any) -> ScanResult:
-        return ScanResult(threat_detected=False, component="MockInjector")
+    def check(self, content: str, **kwargs: Any) -> SecurityResult:
+        return SecurityResult(
+            status=SecurityStatus.SAFE, component=SecurityComponent.SCANNER
+        )
 
-    async def a_check(self, content: str, **kwargs: Any) -> ScanResult:
-        return ScanResult(threat_detected=False, component="MockInjector")
+    async def a_check(self, content: str, **kwargs: Any) -> SecurityResult:
+        return SecurityResult(
+            status=SecurityStatus.SAFE, component=SecurityComponent.SCANNER
+        )
 
 
 class MockScanner(BaseScanner):
-    def check(self, content: str, token: Any = None, **kwargs: Any) -> ScanResult:
+    def check(self, content: str, token: Any = None, **kwargs: Any) -> SecurityResult:
         if "BAD_CONTENT" in content:
-            return ScanResult(threat_detected=True, component="MockScanner")
-        return ScanResult(threat_detected=False, component="MockScanner")
+            return SecurityResult(
+                status=SecurityStatus.UNSAFE, component=SecurityComponent.SCANNER
+            )
+        return SecurityResult(
+            status=SecurityStatus.SAFE, component=SecurityComponent.SCANNER
+        )
 
     async def a_check(
         self, content: str, token: Any = None, **kwargs: Any
-    ) -> ScanResult:
+    ) -> SecurityResult:
         # Reusing logic for parity
         return self.check(content, token=token)
 
@@ -121,10 +134,10 @@ def test_proxy_scanning_threat_detected(mock_openai_client):
 
     messages = [{"role": "system", "content": "Sys"}, {"role": "user", "content": "Hi"}]
 
-    with pytest.raises(ThreatDetectedError) as excinfo:
+    with pytest.raises(SecurityResultError) as excinfo:
         proxy.chat.completions.create(messages=messages)
 
-    assert excinfo.value.result.component == "MockScanner"
+    assert excinfo.value.result.component == SecurityComponent.SCANNER
 
 
 def test_proxy_streaming_skips_scanners(mock_openai_client):
@@ -179,7 +192,9 @@ async def test_async_proxy_threat_detected(mock_async_openai_client):
     # directly
     scanner = Mock(spec=BaseScanner)
     scanner.a_check = AsyncMock(
-        return_value=ScanResult(threat_detected=True, component="MockScanner")
+        return_value=SecurityResult(
+            status=SecurityStatus.UNSAFE, component=SecurityComponent.SCANNER
+        )
     )
     # We also need to satisfy has_attr(d, "check") checks if any
     scanner.check = Mock()
@@ -192,5 +207,5 @@ async def test_async_proxy_threat_detected(mock_async_openai_client):
 
     messages = [{"role": "system", "content": "Sys"}]
 
-    with pytest.raises(ThreatDetectedError):
+    with pytest.raises(SecurityResultError):
         await proxy.chat.completions.create(messages=messages)

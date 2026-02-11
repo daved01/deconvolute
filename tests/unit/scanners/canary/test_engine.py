@@ -1,6 +1,7 @@
 import pytest
 
 from deconvolute import CanaryScanner
+from deconvolute.models.security import SecurityStatus
 
 
 def test_inject_structure() -> None:
@@ -34,7 +35,7 @@ def test_check_safe_exact_match() -> None:
 
     result = canary.check(response, token=token)
 
-    assert result.threat_detected is False
+    assert result.status == SecurityStatus.SAFE
 
     assert result.safe is True
     assert result.token_found == token
@@ -57,7 +58,7 @@ def test_check_fail_fuzzy_match_spaces() -> None:
 
     result = canary.check(response, token=full_token)
 
-    assert result.threat_detected is True
+    assert result.status == SecurityStatus.UNSAFE
     assert result.token_found is None
 
 
@@ -73,7 +74,7 @@ def test_check_fail_fuzzy_match_colon() -> None:
 
     result = canary.check(response, token=full_token)
 
-    assert result.threat_detected is True
+    assert result.status == SecurityStatus.UNSAFE
     assert result.token_found is None
 
 
@@ -87,7 +88,7 @@ def test_check_jailbreak_missing_token() -> None:
 
     result = canary.check(response, token=token)
 
-    assert result.threat_detected is True
+    assert result.status == SecurityStatus.UNSAFE
 
     assert result.token_found is None
 
@@ -96,7 +97,7 @@ def test_check_empty_response() -> None:
     """It should flag empty responses as failures."""
     canary = CanaryScanner()
     result = canary.check("", token="some-token")
-    assert result.threat_detected is True
+    assert result.status == SecurityStatus.UNSAFE
 
 
 def test_clean_removes_token() -> None:
@@ -157,7 +158,7 @@ def test_check_partial_match_fail() -> None:
     response = f"Here is {partial}"
 
     result = canary.check(response, token=token)
-    assert result.threat_detected is True
+    assert result.status == SecurityStatus.UNSAFE
     assert result.safe is False
 
 
@@ -176,7 +177,7 @@ def test_check_case_sensitivity() -> None:
     else:
         response = f"Here is {upper_token}"
         result = canary.check(response, token=token)
-        assert result.threat_detected is True
+        assert result.status == SecurityStatus.UNSAFE
 
 
 def test_clean_no_op_empty() -> None:

@@ -4,7 +4,7 @@ import pytest
 from openai import OpenAI
 
 from deconvolute import llm_guard
-from deconvolute.errors import ThreatDetectedError
+from deconvolute.errors import SecurityResultError
 from deconvolute.scanners.content.language.engine import LanguageScanner
 from deconvolute.scanners.integrity.canary.engine import CanaryScanner
 
@@ -65,7 +65,7 @@ class TestLiveOpenAI:
         print("\nAttempting to trigger a Language Violation...")
 
         # Assert that the error is raised
-        with pytest.raises(ThreatDetectedError) as exc:
+        with pytest.raises(SecurityResultError) as exc:
             client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 # We force the model to output English, which is NOT allowed.

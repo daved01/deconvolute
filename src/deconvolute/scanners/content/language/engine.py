@@ -3,10 +3,11 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 from deconvolute.errors import ConfigurationError
+from deconvolute.models.security import SecurityComponent, SecurityStatus
 from deconvolute.scanners.base import BaseScanner
 from deconvolute.utils.logger import get_logger
 
-from .models import LanguageScanResult
+from .models import LanguageSecurityResult
 
 try:
     from lingua import IsoCode639_1, Language, LanguageDetectorBuilder
@@ -110,7 +111,7 @@ class LanguageScanner(BaseScanner):
         # confidence unless it returns None.
         return iso_code, 1.0
 
-    def check(self, content: str, **kwargs: Any) -> LanguageScanResult:
+    def check(self, content: str, **kwargs: Any) -> LanguageSecurityResult:
         """
         Checks if content matches allowed languages or reference text.
 
@@ -128,12 +129,12 @@ class LanguageScanner(BaseScanner):
 
             # If we successfully detected both languages and they differ
             if detected_code and ref_code and detected_code != ref_code:
-                return LanguageScanResult(
-                    threat_detected=True,
+                return LanguageSecurityResult(
+                    status=SecurityStatus.UNSAFE,
                     detected_language=detected_code,
                     confidence=confidence,
                     allowed_languages=[ref_code] + self.allowed_codes,
-                    component="LanguageScanner",
+                    component=SecurityComponent.LANGUAGE_SCANNER,
                     metadata={
                         "reason": "correspondence_mismatch",
                         "reference_language": ref_code,
@@ -143,24 +144,24 @@ class LanguageScanner(BaseScanner):
         # Check Allowlist (Policy)
         if self.allowed_codes and detected_code:
             if detected_code not in self.allowed_codes:
-                return LanguageScanResult(
-                    threat_detected=True,
+                return LanguageSecurityResult(
+                    status=SecurityStatus.UNSAFE,
                     detected_language=detected_code,
                     confidence=confidence,
                     allowed_languages=self.allowed_codes,
-                    component="LanguageScanner",
+                    component=SecurityComponent.LANGUAGE_SCANNER,
                     metadata={"reason": "policy_violation"},
                 )
 
-        return LanguageScanResult(
-            threat_detected=False,
+        return LanguageSecurityResult(
+            status=SecurityStatus.SAFE,
             detected_language=detected_code,
             confidence=confidence,
             allowed_languages=self.allowed_codes,
-            component="LanguageScanner",
+            component=SecurityComponent.LANGUAGE_SCANNER,
         )
 
-    async def a_check(self, content: str, **kwargs: Any) -> LanguageScanResult:
+    async def a_check(self, content: str, **kwargs: Any) -> LanguageSecurityResult:
         """Async version of check() using a thread pool."""
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(

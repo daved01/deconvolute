@@ -79,6 +79,31 @@ Combine multiple scanners to monitor different failure modes simultaneously. Eac
 
 For detailed examples, configuration options, and integration patterns, see the [Usage Guide & API Documentation](/docs/Readme.md)￼
 
+## MCP Firewall & Protection
+
+Deconvolute goes beyond simple scanning by providing a stateful MCP Firewall. Unlike stateless scanners that only look at individual payloads, the Firewall monitors the entire session lifecycle to prevent sophisticated multi-turn attacks like "Shadowing," "Rug Pulls," and "Confused Deputy."
+
+### Key Features
+* **Stateful Session Monitoring**: Tracks tool definitions and execution history to detect context-dependent attacks.
+* **Rug Pull Prevention**: Cryptographically hashes tool definitions during discovery and verifies them at execution time to ensure tools haven't been tampered with mid-session.
+* **Policy-as-Code**: Enforce security rules using a local `deconvolute_policy.yaml` file with a "Default Deny" architecture.
+* **Enterprise Ready**: Designed for future integration with the Deconvolute Platform for remote policy management and centralized audit logging.
+
+### Quick Start
+```python
+from mcp import ClientSession
+from deconvolute import mcp_guard
+
+# 1. Initialize the Guard (wraps your standard client)
+# This automatically loads 'deconvolute_policy.yaml'
+safe_session = mcp_guard(original_session)
+
+# 2. Use the safe session as normal
+# The Firewall intercepts discovery and execution transparently
+await safe_session.initialize()
+result = await safe_session.call_tool("read_file", path="/etc/passwd")
+```
+
 
 ## Development Status
 

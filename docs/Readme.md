@@ -46,6 +46,32 @@ All scanners support both synchronous and asynchronous execution. This allows th
 High level APIs automatically use the appropriate execution model when available.
 
 
+## The MCP Firewall
+
+The `MCPFirewall` is the core enforcement engine of Deconvolute. It sits between your application and the MCP Server, creating a secure boundary that governs all interactions.
+
+### 1. Architecture
+
+The Firewall operates on a **"Snapshot & Seal"** philosophy:
+
+1.  **Discovery (The Snapshot)**: When your application lists tools, the Firewall inspects them against your policy. Allowed tools are cryptographically hashed and stored in the `StateTracker`.
+2.  **Execution (The Seal)**: When a tool is called, the Firewall verifies that the tool's definition matches the stored hash. This prevents Rug Pull attacks where a server presents a safe tool description but swaps it for a malicious one during execution.
+
+### 2. Configuration (`deconvolute_policy.yaml`)
+
+Security rules are defined in a local YAML file. We use a Default Deny (allow list) approach. If a tool is not explicitly allowed, it is blocked.
+
+### 3. Usage
+The `mcp_guard()` function is your entry point. It acts as a factory that sets up the `StateTracker`, loads your policy, and returns a secure Proxy.
+
+```python
+from deconvolute import mcp_guard
+
+# You can specify a custom policy path
+safe_client = mcp_guard(client, policy_path="./config/security_policy.yaml")
+```
+
+
 ## Getting Started
 
 This section walks through the minimal setup required to start using Deconvolute. It introduces the two primary entry points and shows how scanners fit into a typical LLM or RAG pipeline.

@@ -1,14 +1,14 @@
 from pydantic import Field
 
-from deconvolute.detectors.base import DetectionResult
+from deconvolute.scanners.base import ScanResult
 
 
-class LanguageResult(DetectionResult):
+class LanguageScanResult(ScanResult):
     """
     Result model for Language Consistency Checks.
     """
 
-    component: str = "LanguageDetector"
+    component: str = "LanguageScanner"
 
     detected_language: str | None = Field(
         None, description="ISO 639-1 code of the detected language (e.g. 'en', 'fr')."

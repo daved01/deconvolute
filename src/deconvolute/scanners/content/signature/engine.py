@@ -5,8 +5,8 @@ from typing import Any
 
 import yara
 
-from deconvolute.detectors.base import BaseDetector, DetectionResult
 from deconvolute.errors import ConfigurationError
+from deconvolute.scanners.base import BaseScanner, ScanResult
 from deconvolute.utils.logger import get_logger
 
 logger = get_logger()
@@ -15,11 +15,11 @@ logger = get_logger()
 DEFAULT_RULES_DIR = Path(__file__).parent / "rules"
 
 
-class SignatureDetector(BaseDetector):
+class SignatureScanner(BaseScanner):
     """
-    Detects known threats, adversarial patterns, and PII using signatures.
+    Scans for known threats, adversarial patterns, and PII using signatures.
 
-    This detector performs high-performance pattern matching against text content.
+    This scanner performs high-performance pattern matching against text content.
     It is designed to be the primary defense layer for scanning document ingestion
     pipelines (RAG) or validating raw user inputs.
 
@@ -39,9 +39,9 @@ class SignatureDetector(BaseDetector):
         rules_path: str | Path | None = None,
     ):
         """
-        Initialize the SignatureDetector with a specific rule set.
+        Initialize the SignatureScanner with a specific rule set.
 
-        The detector compiles the rules immediately upon initialization. This is a
+        The scanner compiles the rules immediately upon initialization. This is a
         blocking operation designed to fail fast if the rule file is missing or
         malformed.
 
@@ -91,7 +91,7 @@ class SignatureDetector(BaseDetector):
         except yara.Error as e:
             raise ConfigurationError(f"Failed to compile local rules: {e}") from e
 
-    def check(self, content: str, **kwargs: Any) -> DetectionResult:
+    def check(self, content: str, **kwargs: Any) -> ScanResult:
         """
         Synchronously scans the provided content against the loaded singature rules.
 
@@ -103,7 +103,7 @@ class SignatureDetector(BaseDetector):
             **kwargs: Additional arguments (unused, kept for interface compatibility).
 
         Returns:
-            DetectionResult: A structured result containing:
+            ScanResult: A structured result containing:
                 - threat_detected (bool): True if any rule matched.
                 - metadata (dict): specific matches, tags, and match count.
         """
@@ -114,7 +114,7 @@ class SignatureDetector(BaseDetector):
             matches.extend(self._local_rules.match(data=content))
 
         if not matches:
-            return DetectionResult(threat_detected=False, component="SignatureDetector")
+            return ScanResult(threat_detected=False, component="SignatureScanner")
 
         # Extract metadata from matches
         match_names = [m.rule for m in matches]
@@ -128,13 +128,13 @@ class SignatureDetector(BaseDetector):
         # Deduplicate tags
         tags = list(set(tags))
 
-        return DetectionResult(
+        return ScanResult(
             threat_detected=True,
-            component="SignatureDetector",
+            component="SignatureScanner",
             metadata={"matches": match_names, "tags": tags, "count": len(matches)},
         )
 
-    async def a_check(self, content: str, **kwargs: Any) -> DetectionResult:
+    async def a_check(self, content: str, **kwargs: Any) -> ScanResult:
         """
         Async version.
         """

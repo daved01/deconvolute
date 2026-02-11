@@ -1,9 +1,9 @@
 from pydantic import Field
 
-from deconvolute.detectors.base import DetectionResult
+from deconvolute.scanners.base import ScanResult
 
 
-class CanaryResult(DetectionResult):
+class CanaryScanResult(ScanResult):
     """
     Result model specific to the Canary Jailbreak Detection module.
 
@@ -13,7 +13,7 @@ class CanaryResult(DetectionResult):
     """
 
     # Defaulting component name for convenience, though it can be overridden
-    component: str = "CanaryDetector"
+    component: str = "CanaryScanner"
 
     token_found: str | None = Field(
         None, description="The actual token string found in the output (if any)."

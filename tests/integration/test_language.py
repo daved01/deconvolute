@@ -2,36 +2,57 @@ import importlib.util
 
 import pytest
 
-from deconvolute.detectors.content.language.engine import LanguageDetector
+from deconvolute.scanners.content.language.engine import LanguageScanner
 
 # Check if lingua is actually installed in the environment
 HAS_LINGUA = importlib.util.find_spec("lingua") is not None
 
 
 @pytest.mark.skipif(not HAS_LINGUA, reason="Lingua not installed")
-def test_real_lingua_integration():
+def test_real_lingua_integration_french_detection():
     """
-    Integration test that actually loads the heavy models
-    and verifies the API contract with the real library.
+    Ensures that the real Lingua library is correctly hooked up and detects French.
+    Using lightweight mode (loading only EN/FR).
     """
-    # Initialize with a small subset to keep the test reasonably fast
-    # We load English and French.
-    detector = LanguageDetector(languages_to_load=["en", "fr"])
+    scanner = LanguageScanner(languages_to_load=["en", "fr"])
 
-    # Test a clear English sentence
-    res_en = detector.check("This is a totally normal English sentence.")
-    assert res_en.detected_language == "en"
-    assert res_en.threat_detected is False
-    assert res_en.confidence > 0.8  # Real models should be confident here
+    # This should return a real result from Lingua
+    result = scanner.check("Bonjour tout le monde")
 
-    # Test a clear French sentence
-    res_fr = detector.check("Bonjour tout le monde, comment ça va?")
-    assert res_fr.detected_language == "fr"
+    assert result.threat_detected is False
+    assert result.detected_language == "fr"
+    # Lingua returns 1.0 for deterministic short text usually
+    assert result.confidence > 0.8
 
-    # Test a language we didn't load (e.g. German)
-    # It should either fail detection or classify poorly, but not crash.
-    res_de = detector.check("Das ist ein Test.")
-    # In 'languages_to_load' mode, unknown languages often result in None
-    # or a forced fit to one of the loaded ones with lower confidence.
-    # We just ensure it returns a valid result object.
-    assert res_de is not None
+
+@pytest.mark.skipif(not HAS_LINGUA, reason="Lingua not installed")
+def test_real_lingua_integration_policy_violation():
+    """
+    Ensures that the policy check works with real detection.
+    Allow only English, Input French -> Threat.
+    """
+    scanner = LanguageScanner(allowed_languages=["en"])
+
+    result = scanner.check("Bonjour")
+
+    assert result.threat_detected is True
+    assert result.detected_language == "fr"
+    assert result.metadata["reason"] == "policy_violation"
+
+
+@pytest.mark.skipif(not HAS_LINGUA, reason="Lingua not installed")
+def test_real_lingua_integration_correspondence_check():
+    """
+    Ensures that correspondence check works with real detection.
+    Input English, Output French -> Threat.
+    """
+    scanner = LanguageScanner()
+
+    # Model replies in French to an English query
+    result = scanner.check(
+        content="Bonjour", reference_text="Hello there, how are you doing today?"
+    )
+
+    assert result.threat_detected is True
+    assert result.metadata["reason"] == "correspondence_mismatch"
+    assert result.metadata["reference_language"] == "en"

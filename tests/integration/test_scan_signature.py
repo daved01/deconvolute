@@ -14,7 +14,7 @@ def test_scan_uses_signature_detector_by_default():
     result = scan(KNOWN_ATTACK_VECTOR)
 
     assert result.threat_detected is True
-    assert result.component == "SignatureDetector"
+    assert result.component == "SignatureScanner"
     assert "PromptInjection_Generic_Directives" in result.metadata["matches"]
 
 
@@ -30,4 +30,4 @@ async def test_async_scan_integration():
     result = await a_scan(KNOWN_ATTACK_VECTOR)
 
     assert result.threat_detected is True
-    assert result.component == "SignatureDetector"
+    assert result.component == "SignatureScanner"

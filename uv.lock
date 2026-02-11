@@ -138,7 +138,6 @@ toml = [
 name = "deconvolute"
 source = { editable = "." }
 dependencies = [
-    { name = "httpx" },
     { name = "lingua-language-detector" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
@@ -159,7 +158,6 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "httpx", specifier = ">=0.28.1" },
     { name = "lingua-language-detector", specifier = ">=2.1.1" },
     { name = "pydantic", specifier = ">=2.0" },
     { name = "pydantic-settings", specifier = ">=2.0" },

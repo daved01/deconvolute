@@ -3,16 +3,16 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 from deconvolute.constants import CANARY_INTEGRITY_INSTRUCTION, CANARY_TEMPLATE_FORMAT
-from deconvolute.detectors.base import BaseDetector
+from deconvolute.scanners.base import BaseScanner
 from deconvolute.utils.logger import get_logger
 
 from .generator import generate_raw_token
-from .models import CanaryResult
+from .models import CanaryScanResult
 
 logger = get_logger()
 
 
-class CanaryDetector(BaseDetector):
+class CanaryScanner(BaseScanner):
     """
     Jailbreak Detection via Instructional Adherence Checks (Integrity Canary).
 
@@ -53,7 +53,7 @@ class CanaryDetector(BaseDetector):
         logger.debug(f"Injected integrity canary: {full_token}")
         return secured_prompt, full_token
 
-    def check(self, content: str, **kwargs: Any) -> CanaryResult:
+    def check(self, content: str, **kwargs: Any) -> CanaryScanResult:
         """
         Verifies if the content string contains the mandatory integrity token.
 
@@ -62,7 +62,7 @@ class CanaryDetector(BaseDetector):
             **kwargs: Must contain 'token' (the string returned by inject).
 
         Returns:
-            CanaryResult: The detection result.
+            CanaryScanResult: The detection result.
 
         Raises:
             ValueError: If 'token' is missing from kwargs.
@@ -70,22 +70,22 @@ class CanaryDetector(BaseDetector):
         token = kwargs.get("token")
         if not token:
             raise ValueError(
-                "CanaryDetector.check() requires 'token' argument in kwargs."
+                "CanaryScanner.check() requires 'token' argument in kwargs."
             )
 
         if not content:
             # Empty response is a failure of adherence
-            return CanaryResult(
-                threat_detected=True, component="CanaryDetector", token_found=None
+            return CanaryScanResult(
+                threat_detected=True, component="CanaryScanner", token_found=None
             )
 
         # Strict Check: The model must reproduce the phrase exactly.
         if token in content:
-            return CanaryResult(threat_detected=False, token_found=token)
+            return CanaryScanResult(threat_detected=False, token_found=token)
 
         # We assume Jailbreak if exact match fails.
         logger.warning(f"Integrity check failed. Token missing: {token}")
-        return CanaryResult(threat_detected=True, token_found=None)
+        return CanaryScanResult(threat_detected=True, token_found=None)
 
     def clean(self, content: str, token: str) -> str:
         """
@@ -103,7 +103,7 @@ class CanaryDetector(BaseDetector):
 
         return content.replace(token, "").rstrip()
 
-    async def a_check(self, content: str, **kwargs: Any) -> CanaryResult:
+    async def a_check(self, content: str, **kwargs: Any) -> CanaryScanResult:
         """Async version of check() using a thread pool."""
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(

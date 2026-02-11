@@ -23,7 +23,7 @@ The project uses `uv` for dependency management. It is extremely fast and manage
 1. Clone the repository:
 
     ```bash
-    git clone https://github.com/daved01/deconvolute.git
+    git clone https://github.com/deconvolute-labs/deconvolute.git
     cd deconvolute
     ```
 

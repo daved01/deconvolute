@@ -2,7 +2,7 @@ import string
 
 import pytest
 
-from deconvolute.detectors.integrity.canary.generator import generate_raw_token
+from deconvolute.scanners.integrity.canary.generator import generate_raw_token
 
 
 def test_generate_defaults() -> None:

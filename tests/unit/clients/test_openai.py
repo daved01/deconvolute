@@ -7,30 +7,30 @@ from deconvolute.clients.openai import (
     AsyncOpenAIProxy,
     OpenAIProxy,
 )
-from deconvolute.detectors.base import BaseDetector, DetectionResult
 from deconvolute.errors import ThreatDetectedError
+from deconvolute.scanners.base import BaseScanner, ScanResult
 
 
-class MockInjector(BaseDetector):
+class MockInjector(BaseScanner):
     def inject(self, prompt: str) -> tuple[str, str]:
         return prompt + " [INJECTED]", "token_123"
 
-    def check(self, content: str, **kwargs: Any) -> DetectionResult:
-        return DetectionResult(threat_detected=False, component="MockInjector")
+    def check(self, content: str, **kwargs: Any) -> ScanResult:
+        return ScanResult(threat_detected=False, component="MockInjector")
 
-    async def a_check(self, content: str, **kwargs: Any) -> DetectionResult:
-        return DetectionResult(threat_detected=False, component="MockInjector")
+    async def a_check(self, content: str, **kwargs: Any) -> ScanResult:
+        return ScanResult(threat_detected=False, component="MockInjector")
 
 
-class MockScanner(BaseDetector):
-    def check(self, content: str, token: Any = None, **kwargs: Any) -> DetectionResult:
+class MockScanner(BaseScanner):
+    def check(self, content: str, token: Any = None, **kwargs: Any) -> ScanResult:
         if "BAD_CONTENT" in content:
-            return DetectionResult(threat_detected=True, component="MockScanner")
-        return DetectionResult(threat_detected=False, component="MockScanner")
+            return ScanResult(threat_detected=True, component="MockScanner")
+        return ScanResult(threat_detected=False, component="MockScanner")
 
     async def a_check(
         self, content: str, token: Any = None, **kwargs: Any
-    ) -> DetectionResult:
+    ) -> ScanResult:
         # Reusing logic for parity
         return self.check(content, token=token)
 
@@ -55,13 +55,13 @@ def mock_async_openai_client():
 
 def test_openai_proxy_initialization(mock_openai_client):
     """Test that OpenAIProxy initializes correctly."""
-    injectors: list[BaseDetector] = [MockInjector()]
-    scanners: list[BaseDetector] = [MockScanner()]
-    proxy = OpenAIProxy(client=mock_openai_client, detectors=injectors + scanners)
+    injectors: list[BaseScanner] = [MockInjector()]
+    scanners: list[BaseScanner] = [MockScanner()]
+    proxy = OpenAIProxy(client=mock_openai_client, scanners=injectors + scanners)
 
     assert proxy._client == mock_openai_client
     assert proxy._injectors == injectors
-    # Since MockInjector implements check/a_check (from BaseDetector), it is also
+    # Since MockInjector implements check/a_check (from BaseScanner), it is also
     # a scanner
     assert set(proxy._scanners) == set(injectors + scanners)
     # Verify attribute delegation
@@ -70,8 +70,8 @@ def test_openai_proxy_initialization(mock_openai_client):
 
 def test_proxy_injection_flow(mock_openai_client):
     """Test that injectors modify the input messages."""
-    injector: BaseDetector = MockInjector()
-    proxy = OpenAIProxy(client=mock_openai_client, detectors=[injector])
+    injector: BaseScanner = MockInjector()
+    proxy = OpenAIProxy(client=mock_openai_client, scanners=[injector])
 
     mock_response = Mock()
     mock_response.choices = [Mock(message=Mock(content="Response"))]
@@ -95,8 +95,8 @@ def test_proxy_injection_flow(mock_openai_client):
 
 def test_proxy_scanning_flow_safe(mock_openai_client):
     """Test that scanners validate safe responses."""
-    scanner: BaseDetector = MockScanner()
-    proxy = OpenAIProxy(client=mock_openai_client, detectors=[scanner])
+    scanner: BaseScanner = MockScanner()
+    proxy = OpenAIProxy(client=mock_openai_client, scanners=[scanner])
 
     mock_response = Mock()
     mock_response.choices = [Mock(message=Mock(content="Safe Response"))]
@@ -112,8 +112,8 @@ def test_proxy_scanning_flow_safe(mock_openai_client):
 
 def test_proxy_scanning_threat_detected(mock_openai_client):
     """Test that scanners raise ThreatDetectedError on bad content."""
-    scanner: BaseDetector = MockScanner()
-    proxy = OpenAIProxy(client=mock_openai_client, detectors=[scanner])
+    scanner: BaseScanner = MockScanner()
+    proxy = OpenAIProxy(client=mock_openai_client, scanners=[scanner])
 
     mock_response = Mock()
     mock_response.choices = [Mock(message=Mock(content="This has BAD_CONTENT"))]
@@ -129,10 +129,10 @@ def test_proxy_scanning_threat_detected(mock_openai_client):
 
 def test_proxy_streaming_skips_scanners(mock_openai_client):
     """Test that streaming responses bypass scanners."""
-    scanner = Mock(spec=BaseDetector)
+    scanner = Mock(spec=BaseScanner)
     scanner.check = Mock(side_effect=Exception("Should not be called"))
 
-    proxy = OpenAIProxy(client=mock_openai_client, detectors=[scanner])
+    proxy = OpenAIProxy(client=mock_openai_client, scanners=[scanner])
 
     mock_openai_client.chat.completions.create.return_value = ["stream", "chunks"]
 
@@ -148,10 +148,10 @@ def test_proxy_streaming_skips_scanners(mock_openai_client):
 @pytest.mark.asyncio
 async def test_async_proxy_flow(mock_async_openai_client):
     """Test AsyncOpenAIProxy flow."""
-    injector: BaseDetector = MockInjector()
-    scanner: BaseDetector = MockScanner()
+    injector: BaseScanner = MockInjector()
+    scanner: BaseScanner = MockScanner()
     proxy = AsyncOpenAIProxy(
-        client=mock_async_openai_client, detectors=[injector, scanner]
+        client=mock_async_openai_client, scanners=[injector, scanner]
     )
 
     mock_response = Mock()
@@ -177,14 +177,14 @@ async def test_async_proxy_threat_detected(mock_async_openai_client):
     # Mock async check
     # Again, use a Mock object instead of patching the real class instance method
     # directly
-    scanner = Mock(spec=BaseDetector)
+    scanner = Mock(spec=BaseScanner)
     scanner.a_check = AsyncMock(
-        return_value=DetectionResult(threat_detected=True, component="MockScanner")
+        return_value=ScanResult(threat_detected=True, component="MockScanner")
     )
     # We also need to satisfy has_attr(d, "check") checks if any
     scanner.check = Mock()
 
-    proxy = AsyncOpenAIProxy(client=mock_async_openai_client, detectors=[scanner])
+    proxy = AsyncOpenAIProxy(client=mock_async_openai_client, scanners=[scanner])
 
     mock_response = Mock()
     mock_response.choices = [Mock(message=Mock(content="BAD_CONTENT"))]

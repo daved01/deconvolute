@@ -14,7 +14,7 @@ Detect adversarial prompts, unsafe RAG content, and model output failures in LLM
 
 Deconvolute is a security SDK for large language models that detects misaligned or unsafe outputs. It comes with two simple, opinionated functions:
 - `scan()`: validate any text before it enters your system
-- `guard()`: wrap LLM clients to enforce runtime safety
+- `llm_guard()`: wrap LLM clients to enforce runtime safety
 
 Both functions use pre-configured, carefully selected scanners that cover most prompt injection, malicious compliance, and poisoned RAG attacks out of the box. You get deterministic signals for potential threats and decide how to respond, for example by blocking, logging, discarding, or triggering custom logic.
 
@@ -31,10 +31,10 @@ Wrap an LLM client to detect for example jailbreak attempts:
 
 ```python
 from openai import OpenAI
-from deconvolute import guard, ThreatDetectedError
+from deconvolute import llm_guard, ThreatDetectedError
 
 # Wrap your LLM client to align system outputs with developer intent
-client = guard(OpenAI(api_key="YOUR_KEY"))
+client = llm_guard(OpenAI(api_key="YOUR_KEY"))
 
 try:
     # Use the client as usual

@@ -3,7 +3,7 @@ import os
 import pytest
 from openai import OpenAI
 
-from deconvolute import guard
+from deconvolute import llm_guard
 from deconvolute.errors import ThreatDetectedError
 from deconvolute.scanners.content.language.engine import LanguageScanner
 from deconvolute.scanners.integrity.canary.engine import CanaryScanner
@@ -28,7 +28,7 @@ class TestLiveOpenAI:
         """
         raw_client = OpenAI(api_key=api_key)
         # Use Canary to ensure we test the full inject/check/clean lifecycle
-        client = guard(raw_client, scanners=[CanaryScanner()])
+        client = llm_guard(raw_client, scanners=[CanaryScanner()])
 
         print("\nSending request to OpenAI (Real API)...")
         response = client.chat.completions.create(
@@ -58,7 +58,9 @@ class TestLiveOpenAI:
 
         # Configure to allow French, but we will force the model to speak English.
         # This guarantees a violation.
-        client = guard(raw_client, scanners=[LanguageScanner(allowed_languages=["fr"])])
+        client = llm_guard(
+            raw_client, scanners=[LanguageScanner(allowed_languages=["fr"])]
+        )
 
         print("\nAttempting to trigger a Language Violation...")
 

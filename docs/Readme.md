@@ -11,7 +11,7 @@ Deconvolute is built around a simple separation of responsibilities:
 - Used before storage or retrieval in RAG systems
 - Uses signature-based scanning by default to catch poisoned content
 
-`guard()` protects your **model behavior**
+`llm_guard()` protects your **model behavior**
 - Wraps live LLM calls
 - Detects loss of instructional control or policy violations in outputs
 
@@ -60,27 +60,27 @@ pip install deconvolute
 
 The base installation includes the default scanner set and is sufficient to get started.
 
-### Two Entry Points: guard and scan
+### Two Entry Points: llm_guard and scan
 
 Deconvolute provides two primary entry points that are designed for different parts of an AI system:
-- `guard()` protects live LLM calls by wrapping an API client.
+- `llm_guard()` protects live LLM calls by wrapping an API client.
 - `scan()` analyzes untrusted text using signature-based scanning by default, making it the primary defense against poisoned documents and known adversarial patterns in RAG systems.
 
 They are designed to be used together as part of a defense in depth strategy.
 
-### Protecting LLM Calls with guard
+### Protecting LLM Calls with llm_guard
 
-Use `guard()` to wrap an existing LLM client. This applies a pre-configured, layered set of scanners to model inputs and outputs while keeping latency overhead minimal. This makes it suitable for direct user facing request flows.
+Use `llm_guard()` to wrap an existing LLM client. This applies a pre-configured, layered set of scanners to model inputs and outputs while keeping latency overhead minimal. This makes it suitable for direct user facing request flows.
 
 
 ```python
 import os
 from openai import OpenAI
-from deconvolute import guard
+from deconvolute import llm_guard
 
 raw_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-client = guard(raw_client)
+client = llm_guard(raw_client)
 
 try:
     response = client.chat.completions.create(
@@ -116,19 +116,19 @@ else:
     context.append(doc_chunk)
 ```
 
-Unlike `guard()`, `scan()` is not optimized for low latency. It is intended for offline or background processing where correctness is more important than response time.
+Unlike `llm_guard()`, `scan()` is not optimized for low latency. It is intended for offline or background processing where correctness is more important than response time.
 
 ### Asynchronous Usage
 
 All high level APIs also support asynchronous execution.
 
-When using async code, `guard()` automatically uses async scanner methods where available. For `scan()`, use await `a_scan()` instead of `scan()`.
+When using async code, `llm_guard()` automatically uses async scanner methods where available. For `scan()`, use await `a_scan()` instead of `scan()`.
 
 ```python
 result = await a_scan(doc_chunk)
 ```
 
-For most applications, starting with the default configuration of `guard()` and `scan()` is sufficient. Advanced configuration is only needed when enforcing custom policies or enabling specific scanners.
+For most applications, starting with the default configuration of `llm_guard()` and `scan()` is sufficient. Advanced configuration is only needed when enforcing custom policies or enabling specific scanners.
 
 
 ## Advanced Configuration
@@ -137,18 +137,18 @@ Advanced configuration allows you to explicitly control which scanners are used 
 
 ### Custom Scanner Policies
 
-Both `guard()` and `scan()` accept an explicit list of scanners. When provided, only these scanners are executed.
+Both `llm_guard()` and `scan()` accept an explicit list of scanners. When provided, only these scanners are executed.
 
 ```python
 from openai import OpenAI
-from deconvolute import guard, CanaryScanner, LanguageScanner
+from deconvolute import llm_guard, CanaryScanner, LanguageScanner
 
 scanners = [
     CanaryScanner(token_length=32),
     LanguageScanner(allowed_languages=["fr"])
 ]
 
-client = guard(OpenAI(), scanners=scanners)
+client = llm_guard(OpenAI(), scanners=scanners)
 ```
 
 This allows you to define a clear security policy, such as enforcing instructional adherence while restricting all outputs to a specific language.
@@ -179,7 +179,7 @@ Additional scanners may require optional dependencies. These are intentionally k
 ### Async Behavior
 
 All scanners support synchronous and asynchronous execution.
-- `guard()` automatically uses async scanner methods when wrapping async clients.
+- `llm_guard()` automatically uses async scanner methods when wrapping async clients.
 - `scan()` must be explicitly awaited using `a_scan()` in async code.
 
 ```python
@@ -200,7 +200,7 @@ If an optional scanner is configured but its dependencies are not installed, an 
 
 ## Direct Scanner Usage
 
-Most applications should rely on `guard()` and `scan()` to apply scanners automatically. These APIs handle scanner composition, execution order, and error propagation for common use cases.
+Most applications should rely on `llm_guard()` and `scan()` to apply scanners automatically. These APIs handle scanner composition, execution order, and error propagation for common use cases.
 
 Direct scanner usage is intended for advanced scenarios where you need full control over how and when scanners are applied. This includes custom LLM orchestration, non standard execution flows, or cases where scanner results need to be combined with application specific logic.
 

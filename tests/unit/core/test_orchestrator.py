@@ -7,7 +7,7 @@ from deconvolute import DeconvoluteError
 from deconvolute.core.orchestrator import (
     _resolve_configuration,
     a_scan,
-    guard,
+    llm_guard,
     scan,
 )
 from deconvolute.scanners.base import BaseScanner, ScanResult
@@ -100,39 +100,39 @@ def test_resolve_config_api_key_no_overwrite(mock_scanner):
     assert mock_scanner.api_key == "existing-key"
 
 
-def test_guard_wrapper_sync(clean_client, mock_guard_defaults):
+def test_llm_guard_wrapper_sync(clean_client, mock_guard_defaults):
     mock_module = MagicMock()
 
     mock_proxy_class = MagicMock()
     mock_module.OpenAIProxy = mock_proxy_class
 
     with patch.dict("sys.modules", {"deconvolute.clients.openai": mock_module}):
-        result = guard(clean_client)
+        result = llm_guard(clean_client)
 
         # Verify OpenAIProxy was instantiated with client
         mock_proxy_class.assert_called()
         assert result == mock_proxy_class.return_value
 
 
-def test_guard_wrapper_async(async_clean_client, mock_guard_defaults):
+def test_llm_guard_wrapper_async(async_clean_client, mock_guard_defaults):
     mock_module = MagicMock()
     mock_proxy_class = MagicMock()
     mock_module.AsyncOpenAIProxy = mock_proxy_class
 
     with patch.dict("sys.modules", {"deconvolute.clients.openai": mock_module}):
-        result = guard(async_clean_client)
+        result = llm_guard(async_clean_client)
 
         mock_proxy_class.assert_called()
         assert result == mock_proxy_class.return_value
 
 
-def test_guard_unsupported_client(mock_guard_defaults):
+def test_llm_guard_unsupported_client(mock_guard_defaults):
     client = MagicMock()
     client.__class__.__name__ = "UnknownClient"
     client.__class__.__module__ = "unknown_lib"
 
     with pytest.raises(DeconvoluteError, match="Unsupported client type"):
-        guard(client)
+        llm_guard(client)
 
 
 def test_scan_uses_scan_defaults():
@@ -149,7 +149,7 @@ def test_scan_uses_scan_defaults():
         mock_scanner.check.assert_called_once()
 
 
-def test_guard_uses_guard_defaults():
+def test_llm_guard_uses_guard_defaults():
     with patch(
         "deconvolute.core.orchestrator.get_guard_defaults"
     ) as mock_get_guard_defaults:
@@ -161,7 +161,7 @@ def test_guard_uses_guard_defaults():
         mock_get_guard_defaults.return_value = []
 
         try:
-            guard(mock_client, scanners=None)
+            llm_guard(mock_client, scanners=None)
         except Exception:  # noqa
             pass
 
@@ -174,10 +174,10 @@ def test_scan_unsupported_client(mock_scan_defaults):
     client.__class__.__module__ = "unknown_lib"
 
     with pytest.raises(DeconvoluteError, match="Unsupported client type"):
-        guard(client)
+        llm_guard(client)
 
 
-def test_guard_openai_import_error(clean_client, mock_guard_defaults):
+def test_llm_guard_openai_import_error(clean_client, mock_guard_defaults):
     # Simulate openai being detected by name but failing to import the proxy module
     # This one is hard because guard has a local import for the OpenAIProxy etc.
     original_import = __import__
@@ -194,7 +194,7 @@ def test_guard_openai_import_error(clean_client, mock_guard_defaults):
 
         with patch("builtins.__import__", side_effect=mock_import):
             with pytest.raises(DeconvoluteError, match="client, but failed to import"):
-                guard(clean_client)
+                llm_guard(clean_client)
 
 
 def test_scan_threat_detected(mock_threat_scanner):

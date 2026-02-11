@@ -12,7 +12,7 @@ logger = get_logger()
 T = TypeVar("T")
 
 
-def guard(
+def llm_guard(
     client: T, scanners: list[BaseScanner] | None = None, api_key: str | None = None
 ) -> T:
     """

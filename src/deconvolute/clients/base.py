@@ -32,7 +32,7 @@ class BaseProxy:
 
         Args:
             client: The original LLM client instance.
-            scanners: A strict list of scanners. The factory (guard) is responsible
+            scanners: A strict list of scanners. The factory (llm_guard) is responsible
                 for resolving defaults before calling this.
             api_key: Optional Deconvolute API key.
         """

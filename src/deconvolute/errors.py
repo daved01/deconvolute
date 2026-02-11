@@ -34,3 +34,16 @@ class SecurityResultError(DeconvoluteError):
     def __init__(self, message: str, result: Any) -> None:
         super().__init__(message)
         self.result = result
+
+
+class MCPSessionError(DeconvoluteError):
+    """
+    Raised when an integrity violation or state error occurs within the MCP Firewall.
+
+    Examples:
+    - Attempting to register a tool without a name.
+    - Accessing a tool that was never registered (shadowing).
+    - Integrity mismatch (rug pull) if strict mode is enforcing exceptions.
+    """
+
+    pass

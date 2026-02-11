@@ -33,6 +33,9 @@ dependencies = [
 Homepage = "https://deconvoluteai.com"
 Issues = "https://github.com/deconvolute-labs/deconvolute/issues"
 
+[project.scripts]
+deconvolute = "deconvolute.cli.main:main"
+dcv = "deconvolute.cli.main:main"
 
 [dependency-groups]
 dev = [

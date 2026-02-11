@@ -89,6 +89,8 @@ Deconvolute goes beyond simple scanning by providing a stateful MCP Firewall. Un
 * **Policy-as-Code**: Enforce security rules using a local `deconvolute_policy.yaml` file with a "Default Deny" architecture.
 * **Enterprise Ready**: Designed for future integration with the Deconvolute Platform for remote policy management and centralized audit logging.
 
+This requires the config file `deconvolute_policy.yaml`. If this file is not found a runtime error will be raised. You can create this by running the command `dcv init mcp-policy`.
+
 ### Quick Start
 ```python
 from mcp import ClientSession

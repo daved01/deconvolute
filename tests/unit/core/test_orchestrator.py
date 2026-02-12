@@ -10,7 +10,12 @@ from deconvolute.core.orchestrator import (
     llm_guard,
     scan,
 )
-from deconvolute.scanners.base import BaseScanner, ScanResult
+from deconvolute.models.security import (
+    SecurityComponent,
+    SecurityResult,
+    SecurityStatus,
+)
+from deconvolute.scanners.base import BaseScanner
 
 
 @pytest.fixture
@@ -33,9 +38,13 @@ def mock_scan_defaults():
 def mock_scanner():
     """A clean scanner that finds no threats."""
     d = MagicMock(spec=BaseScanner)
-    d.check.return_value = ScanResult(threat_detected=False, component="MockScanner")
+    d.check.return_value = SecurityResult(
+        status=SecurityStatus.SAFE, component=SecurityComponent.SCANNER
+    )
     d.a_check = AsyncMock(
-        return_value=ScanResult(threat_detected=False, component="MockScanner")
+        return_value=SecurityResult(
+            status=SecurityStatus.SAFE, component=SecurityComponent.SCANNER
+        )
     )
     return d
 
@@ -44,15 +53,15 @@ def mock_scanner():
 def mock_threat_scanner():
     """A scanner that ALWAYS finds a threat."""
     d = MagicMock(spec=BaseScanner)
-    d.check.return_value = ScanResult(
-        threat_detected=True,
-        component="ThreatScanner",
+    d.check.return_value = SecurityResult(
+        status=SecurityStatus.UNSAFE,
+        component=SecurityComponent.SCANNER,
         metadata={"details": "Bad content"},
     )
     d.a_check = AsyncMock(
-        return_value=ScanResult(
-            threat_detected=True,
-            component="ThreatScanner",
+        return_value=SecurityResult(
+            status=SecurityStatus.UNSAFE,
+            component=SecurityComponent.SCANNER,
             metadata={"details": "Bad content"},
         )
     )
@@ -140,7 +149,8 @@ def test_scan_uses_scan_defaults():
         "deconvolute.core.orchestrator.get_scan_defaults"
     ) as mock_get_scan_defaults:
         mock_scanner = MagicMock()
-        mock_scanner.check.return_value = MagicMock(threat_detected=False)
+        mock_scanner.check.return_value = MagicMock(status=SecurityStatus.SAFE)
+        mock_scanner.check.return_value.safe = True  # Mock property
         mock_get_scan_defaults.return_value = [mock_scanner]
 
         scan("test content", scanners=None)
@@ -199,14 +209,14 @@ def test_llm_guard_openai_import_error(clean_client, mock_guard_defaults):
 
 def test_scan_threat_detected(mock_threat_scanner):
     result = scan("some content", scanners=[mock_threat_scanner])
-    assert result.threat_detected is True
+    assert result.status == SecurityStatus.UNSAFE
     assert result.metadata.get("details") == "Bad content"
 
 
 def test_scan_clean(mock_scanner):
     result = scan("safe content", scanners=[mock_scanner])
-    assert result.threat_detected is False
-    assert result.component == "Scanner"
+    assert result.status == SecurityStatus.SAFE
+    assert result.component == SecurityComponent.SCANNER
 
 
 def test_scan_calls_checks(mock_scanner):
@@ -217,13 +227,13 @@ def test_scan_calls_checks(mock_scanner):
 @pytest.mark.asyncio
 async def test_a_scan_threat_detected(mock_threat_scanner):
     result = await a_scan("some content", scanners=[mock_threat_scanner])
-    assert result.threat_detected is True
+    assert result.status == SecurityStatus.UNSAFE
 
 
 @pytest.mark.asyncio
 async def test_a_scan_clean(mock_scanner):
     result = await a_scan("safe content", scanners=[mock_scanner])
-    assert result.threat_detected is False
+    assert result.status == SecurityStatus.SAFE
 
 
 @pytest.mark.asyncio

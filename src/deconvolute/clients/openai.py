@@ -1,7 +1,7 @@
 from typing import Any, Protocol, cast
 
-from deconvolute.clients.base import BaseProxy
-from deconvolute.errors import DeconvoluteError, ThreatDetectedError
+from deconvolute.clients.base import BaseLLMProxy
+from deconvolute.errors import DeconvoluteError, SecurityResultError
 from deconvolute.scanners.base import BaseScanner
 from deconvolute.utils.logger import get_logger
 
@@ -12,7 +12,7 @@ class Injector(Protocol):
     def inject(self, content: str) -> tuple[str, Any]: ...
 
 
-class OpenAIProxy(BaseProxy):
+class OpenAIProxy(BaseLLMProxy):
     """
     Synchronous Proxy for the OpenAI client.
 
@@ -21,7 +21,7 @@ class OpenAIProxy(BaseProxy):
     and validate outputs (Content Scanning).
 
     All other calls (e.g. `client.embeddings`, `client.images`, `client.models`) are
-    transparently delegated to the underlying client via the BaseProxy mechanism,
+    transparently delegated to the underlying client via the BaseLLMProxy mechanism,
     ensuring full compatibility with the original SDK.
     """
 
@@ -37,7 +37,7 @@ class OpenAIProxy(BaseProxy):
         return ChatProxy(self._client.chat, self._injectors, self._scanners)
 
 
-class AsyncOpenAIProxy(BaseProxy):
+class AsyncOpenAIProxy(BaseLLMProxy):
     """
     Asynchronous Proxy for the OpenAI client.
 
@@ -129,7 +129,7 @@ class CompletionsProxy:
             sanitized (e.g. tokens removed) and validated.
 
         Raises:
-            ThreatDetectedError: If a scanner (e.g. Language, Canary) identifies a
+            SecurityResultError: If a scanner (e.g. Language, Canary) identifies a
                 threat in any of the generated choices.
             DeconvoluteError: If integrity checks are enabled but the request
                 configuration is invalid (e.g. missing a 'system' message).
@@ -219,9 +219,9 @@ class CompletionsProxy:
                 # If any choice fails, the entire batch is compromised.
                 result = scanner.check(content, token=token)
 
-                if result.threat_detected:
+                if not result.safe:
                     # We define the component as "Choice X -> Scanner Y" for clarity
-                    raise ThreatDetectedError(
+                    raise SecurityResultError(
                         (
                             "Threat detected in choice index "
                             f"{choice.index} by {result.component}"
@@ -295,7 +295,7 @@ class AsyncCompletionsProxy:
             ChatCompletion: The sanitized OpenAI response object.
 
         Raises:
-            ThreatDetectedError: If a threat is detected in the response.
+            SecurityResultError: If a threat is detected in the response.
             DeconvoluteError: If the request configuration is invalid.
         """
         layer_states: dict[BaseScanner, Any] = {}
@@ -354,9 +354,9 @@ class AsyncCompletionsProxy:
                 # If any choice fails, the entire batch is compromised.
                 result = await scanner.a_check(content, token=token)
 
-                if result.threat_detected:
+                if not result.safe:
                     # We define the component as "Choice X -> Scanner Y" for clarity
-                    raise ThreatDetectedError(
+                    raise SecurityResultError(
                         (
                             "Threat detected in choice index "
                             f"{choice.index} by {result.component}"

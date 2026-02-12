@@ -6,8 +6,9 @@ META_MODEL = "model_version"
 # Default timeouts (if needed later)
 DEFAULT_TIMEOUT_SEC = 5.0
 
+DEFAULT_MCP_POLICY_FILENAME = "deconvolute_policy.yaml"
 
-# Canary Detector
+# Canary Scanner
 
 # The specific format of the token.
 # NOTE: The closing '>>' is critical for the security of the exact-match check.

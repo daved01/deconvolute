@@ -19,15 +19,31 @@ class ConfigurationError(DeconvoluteError):
     pass
 
 
-class ThreatDetectedError(DeconvoluteError):
+class SecurityResultError(DeconvoluteError):
     """
-    Raised when a security threat is detected.
+    Raised when a security threat is detected or a policy violation occurs.
 
-    Note: The SDK methods (like detector.check()) generally
-    return a Result object rather than raising this. This exception is provided
-    for users who prefer to raise it in their own logic based on the Result.
+    This exception carries the `SecurityResult` payload, allowing the calling
+    application to inspect exactly why the request was blocked (e.g. specific
+    scanner, rule ID, or confidence score).
+
+    Attributes:
+        result (SecurityResult): The detailed security result.
     """
 
-    def __init__(self, message: str, result: Any = None):
+    def __init__(self, message: str, result: Any) -> None:
         super().__init__(message)
         self.result = result
+
+
+class MCPSessionError(DeconvoluteError):
+    """
+    Raised when an integrity violation or state error occurs within the MCP Firewall.
+
+    Examples:
+    - Attempting to register a tool without a name.
+    - Accessing a tool that was never registered (shadowing).
+    - Integrity mismatch (rug pull) if strict mode is enforcing exceptions.
+    """
+
+    pass

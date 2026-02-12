@@ -1,15 +1,72 @@
 import os
 from typing import TypeVar
 
+from deconvolute.constants import DEFAULT_MCP_POLICY_FILENAME
 from deconvolute.core.defaults import get_guard_defaults, get_scan_defaults
+from deconvolute.core.firewall import MCPFirewall
+from deconvolute.core.policy import PolicyLoader
 from deconvolute.errors import DeconvoluteError
-from deconvolute.scanners.base import BaseScanner, ScanResult
+from deconvolute.models.security import (
+    SecurityComponent,
+    SecurityResult,
+    SecurityStatus,
+)
+from deconvolute.scanners.base import BaseScanner
 from deconvolute.utils.logger import get_logger
 
 logger = get_logger()
 
 # TypeVar ensures that the IDE sees the return type as the same as the input type.
 T = TypeVar("T")
+
+
+def mcp_guard(client: T, policy_path: str = DEFAULT_MCP_POLICY_FILENAME) -> T:
+    """
+    Wraps an MCP ClientSession with the Deconvolute Firewall.
+
+    This acts as a transparent proxy that enforces the security policy defined
+    in 'deconvolute_policy.yaml'. It intercepts:
+    - Tool Discovery (list_tools): Hiding unauthorized tools.
+    - Tool Execution (call_tool): Blocking unauthorized or tampered calls.
+
+    Args:
+        client: The connected mcp.ClientSession instance.
+        policy_path: Path to the security policy file.
+
+    Returns:
+        A proxy object that mimics the MCP ClientSession interface but enforces security
+
+    Raises:
+        ConfigurationError: If the policy file is missing or invalid.
+        DeconvoluteError: If the 'mcp' library is not installed.
+    """
+    # Load & Validate Policy (Fails fast if missing)
+    # We load this BEFORE importing the proxy to ensure configuration is valid.
+    policy = PolicyLoader.load(policy_path)
+
+    # Initialize the Firewall Engine
+    firewall = MCPFirewall(policy)
+
+    # Lazy Import the Proxy
+    # We only import this here to avoid crashing apps that don't have 'mcp' installed.
+    try:
+        from deconvolute.clients.mcp import MCP_AVAILABLE, MCPProxy
+
+        if not MCP_AVAILABLE:
+            raise ImportError("The 'mcp' library is not installed.")
+
+    except ImportError as e:
+        raise DeconvoluteError(
+            "Failed to import MCP support. Ensure the 'mcp' library is installed "
+            "in your environment to use mcp_guard()."
+        ) from e
+
+    logger.debug(f"Deconvolute: Wrapping MCP Client with policy '{policy_path}'")
+
+    # Return the wrapped client
+    # We ignore return-value because MCPProxy dynamically mimics T
+    # We ignore arg-type because client is T but MCPProxy expects ClientSession
+    return MCPProxy(client, firewall)  # type: ignore[return-value, arg-type]
 
 
 def llm_guard(
@@ -90,7 +147,7 @@ def scan(
     content: str,
     scanners: list[BaseScanner] | None = None,
     api_key: str | None = None,
-) -> ScanResult:
+) -> SecurityResult:
     """
     Synchronously scans a string for threats using the configured scanners.
 
@@ -104,7 +161,7 @@ def scan(
         api_key: Optional Deconvolute API key.
 
     Returns:
-        ScanResult: The result of the first scanner that found a threat,
+        SecurityResult: The result of the first scanner that found a threat,
         or a clean result if all passed.
     """
     # Load Defaults if needed
@@ -120,17 +177,19 @@ def scan(
 
     for scanner in active_scanners:
         result = scanner.check(content)
-        if result.threat_detected:
+        if not result.safe:
             return result
 
-    return ScanResult(threat_detected=False, component="Scanner")
+    return SecurityResult(
+        status=SecurityStatus.SAFE, component=SecurityComponent.SCANNER
+    )
 
 
 async def a_scan(
     content: str,
     scanners: list[BaseScanner] | None = None,
     api_key: str | None = None,
-) -> ScanResult:
+) -> SecurityResult:
     """
     Asynchronously scans a string for threats.
 
@@ -146,10 +205,12 @@ async def a_scan(
 
     for scanner in active_scanners:
         result = await scanner.a_check(content)
-        if result.threat_detected:
+        if not result.safe:
             return result
 
-    return ScanResult(threat_detected=False, component="Scanner")
+    return SecurityResult(
+        status=SecurityStatus.SAFE, component=SecurityComponent.SCANNER
+    )
 
 
 def _resolve_configuration(

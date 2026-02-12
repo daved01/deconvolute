@@ -36,3 +36,6 @@ ENV/
 coverage.xml
 htmlcov/
 .pytest_cache/
+
+# --- Application ---
+deconvolute_policy.yaml

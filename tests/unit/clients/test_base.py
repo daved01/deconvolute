@@ -3,12 +3,17 @@ from unittest.mock import Mock
 
 import pytest
 
-from deconvolute.clients.base import BaseProxy
-from deconvolute.scanners.base import BaseScanner, ScanResult
+from deconvolute.clients.base import BaseLLMProxy
+from deconvolute.models.security import (
+    SecurityComponent,
+    SecurityResult,
+    SecurityStatus,
+)
+from deconvolute.scanners.base import BaseScanner
 
 
-class ConcreteProxy(BaseProxy):
-    """Concrete implementation of BaseProxy for testing."""
+class ConcreteProxy(BaseLLMProxy):
+    """Concrete implementation of BaseLLMProxy for testing."""
 
     pass
 
@@ -17,36 +22,48 @@ class MockInjector(BaseScanner):
     def inject(self, prompt: str) -> tuple[str, str]:
         return prompt, "token"
 
-    def check(self, content: str, **kwargs: Any) -> ScanResult:
-        return ScanResult(threat_detected=False, component="MockInjector")
+    def check(self, content: str, **kwargs: Any) -> SecurityResult:
+        return SecurityResult(
+            status=SecurityStatus.SAFE, component=SecurityComponent.SCANNER
+        )
 
-    async def a_check(self, content: str, **kwargs: Any) -> ScanResult:
-        return ScanResult(threat_detected=False, component="MockInjector")
+    async def a_check(self, content: str, **kwargs: Any) -> SecurityResult:
+        return SecurityResult(
+            status=SecurityStatus.SAFE, component=SecurityComponent.SCANNER
+        )
 
 
 class MockScanner(BaseScanner):
-    def check(self, content: str, **kwargs: Any) -> ScanResult:
-        return ScanResult(threat_detected=False, component="MockScanner")
+    def check(self, content: str, **kwargs: Any) -> SecurityResult:
+        return SecurityResult(
+            status=SecurityStatus.SAFE, component=SecurityComponent.SCANNER
+        )
 
-    async def a_check(self, content: str, **kwargs: Any) -> ScanResult:
-        return ScanResult(threat_detected=False, component="MockScanner")
+    async def a_check(self, content: str, **kwargs: Any) -> SecurityResult:
+        return SecurityResult(
+            status=SecurityStatus.SAFE, component=SecurityComponent.SCANNER
+        )
 
 
 class MockDualScanner(BaseScanner):
     def inject(self, prompt: str) -> tuple[str, str]:
         return prompt, "token"
 
-    def check(self, content: str, **kwargs: Any) -> ScanResult:
-        return ScanResult(threat_detected=False, component="MockDualScanner")
+    def check(self, content: str, **kwargs: Any) -> SecurityResult:
+        return SecurityResult(
+            status=SecurityStatus.SAFE, component=SecurityComponent.SCANNER
+        )
 
-    async def a_check(self, content: str, **kwargs: Any) -> ScanResult:
-        return ScanResult(threat_detected=False, component="MockDualScanner")
+    async def a_check(self, content: str, **kwargs: Any) -> SecurityResult:
+        return SecurityResult(
+            status=SecurityStatus.SAFE, component=SecurityComponent.SCANNER
+        )
 
 
 def test_base_proxy_cannot_be_instantiated_directly():
-    """Test that BaseProxy raises TypeError on direct instantiation."""
-    with pytest.raises(TypeError, match="BaseProxy cannot be instantiated directly"):
-        BaseProxy(client=Mock(), scanners=[])
+    """Test that BaseLLMProxy raises TypeError on direct instantiation."""
+    with pytest.raises(TypeError, match="BaseLLMProxy cannot be instantiated directly"):
+        BaseLLMProxy(client=Mock(), scanners=[])
 
 
 def test_concrete_proxy_initialization():

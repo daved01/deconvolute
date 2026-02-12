@@ -6,7 +6,12 @@ from typing import Any
 import yara
 
 from deconvolute.errors import ConfigurationError
-from deconvolute.scanners.base import BaseScanner, ScanResult
+from deconvolute.models.security import (
+    SecurityComponent,
+    SecurityResult,
+    SecurityStatus,
+)
+from deconvolute.scanners.base import BaseScanner
 from deconvolute.utils.logger import get_logger
 
 logger = get_logger()
@@ -91,9 +96,9 @@ class SignatureScanner(BaseScanner):
         except yara.Error as e:
             raise ConfigurationError(f"Failed to compile local rules: {e}") from e
 
-    def check(self, content: str, **kwargs: Any) -> ScanResult:
+    def check(self, content: str, **kwargs: Any) -> SecurityResult:
         """
-        Synchronously scans the provided content against the loaded singature rules.
+        Synchronously scans the provided content against the loaded signature rules.
 
         This method performs a blocking scan. While underlying YARA is highly optimized,
         scanning very large documents may block the execution thread briefly.
@@ -103,8 +108,8 @@ class SignatureScanner(BaseScanner):
             **kwargs: Additional arguments (unused, kept for interface compatibility).
 
         Returns:
-            ScanResult: A structured result containing:
-                - threat_detected (bool): True if any rule matched.
+            SecurityResult: A structured result containing:
+                - status (SecurityStatus): UNSAFE if any rule matched, else SAFE.
                 - metadata (dict): specific matches, tags, and match count.
         """
         matches: list[yara.rule | yara.tags | yara.meta] = []
@@ -114,7 +119,10 @@ class SignatureScanner(BaseScanner):
             matches.extend(self._local_rules.match(data=content))
 
         if not matches:
-            return ScanResult(threat_detected=False, component="SignatureScanner")
+            return SecurityResult(
+                status=SecurityStatus.SAFE,
+                component=SecurityComponent.SIGNATURE_SCANNER,
+            )
 
         # Extract metadata from matches
         match_names = [m.rule for m in matches]
@@ -128,13 +136,13 @@ class SignatureScanner(BaseScanner):
         # Deduplicate tags
         tags = list(set(tags))
 
-        return ScanResult(
-            threat_detected=True,
-            component="SignatureScanner",
+        return SecurityResult(
+            status=SecurityStatus.UNSAFE,
+            component=SecurityComponent.SIGNATURE_SCANNER,
             metadata={"matches": match_names, "tags": tags, "count": len(matches)},
         )
 
-    async def a_check(self, content: str, **kwargs: Any) -> ScanResult:
+    async def a_check(self, content: str, **kwargs: Any) -> SecurityResult:
         """
         Async version.
         """

@@ -1,0 +1,7 @@
+version: "1.0"
+default_action: "block"
+rules:
+  - tool: "echo"
+    action: "allow"
+  - tool: "add"
+    action: "allow"

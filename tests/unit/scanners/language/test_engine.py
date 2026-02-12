@@ -4,6 +4,7 @@ import pytest
 
 from deconvolute import LanguageScanner
 from deconvolute.errors import ConfigurationError
+from deconvolute.models.security import SecurityStatus
 
 
 @pytest.fixture
@@ -133,7 +134,7 @@ def test_check_detects_language_correctly(mock_lingua):
     scanner = LanguageScanner()
     result = scanner.check("Hello world (english)")
 
-    assert result.threat_detected is False
+    assert result.status == SecurityStatus.SAFE
     assert result.detected_language == "en"
     assert result.confidence == 1.0
 
@@ -145,11 +146,11 @@ def test_check_empty_input(mock_lingua):
     res_empty = scanner.check("")
     assert res_empty.detected_language is None
     assert res_empty.confidence == 0.0
-    assert res_empty.threat_detected is False
+    assert res_empty.status == SecurityStatus.SAFE
 
     res_none = scanner.check(None)  # type: ignore[arg-type]
     assert res_none.detected_language is None
-    assert res_none.threat_detected is False
+    assert res_none.status == SecurityStatus.SAFE
 
 
 def test_check_unknown_language(mock_lingua):
@@ -160,7 +161,7 @@ def test_check_unknown_language(mock_lingua):
 
     assert result.detected_language is None
     assert result.confidence == 0.0
-    assert result.threat_detected is False
+    assert result.status == SecurityStatus.SAFE
 
 
 def test_check_policy_violation(mock_lingua):
@@ -171,7 +172,7 @@ def test_check_policy_violation(mock_lingua):
     # Input: French
     result = scanner.check("Bonjour le monde (french)")
 
-    assert result.threat_detected is True
+    assert result.status == SecurityStatus.UNSAFE
     assert result.detected_language == "fr"
     assert result.metadata["reason"] == "policy_violation"
 
@@ -181,7 +182,7 @@ def test_check_policy_success(mock_lingua):
     scanner = LanguageScanner(allowed_languages=["fr", "french"])
     result = scanner.check("Bonjour le monde (french)")
 
-    assert result.threat_detected is False
+    assert result.status == SecurityStatus.SAFE
 
 
 def test_check_correspondence_mismatch(mock_lingua):
@@ -191,7 +192,7 @@ def test_check_correspondence_mismatch(mock_lingua):
     # User asks in English, Model replies in French
     result = scanner.check(content="Bonjour (french)", reference_text="Hello (english)")
 
-    assert result.threat_detected is True
+    assert result.status == SecurityStatus.UNSAFE
     assert result.detected_language == "fr"
     assert result.metadata["reason"] == "correspondence_mismatch"
     assert result.metadata["reference_language"] == "en"
@@ -209,11 +210,11 @@ def test_check_correspondence_case_mismatch(mock_lingua):
 
     # Input: French -> match
     res_fr = scanner_policy.check("Bonjour (french)")
-    assert res_fr.threat_detected is False
+    assert res_fr.status == SecurityStatus.SAFE
 
     # Input: English -> match
     res_en = scanner_policy.check("Hello (english)")
-    assert res_en.threat_detected is False
+    assert res_en.status == SecurityStatus.SAFE
 
 
 def test_check_correspondence_success(mock_lingua):
@@ -224,7 +225,7 @@ def test_check_correspondence_success(mock_lingua):
         content="Hello there (english)", reference_text="Hi friend (english)"
     )
 
-    assert result.threat_detected is False
+    assert result.status == SecurityStatus.SAFE
     assert result.detected_language == "en"
 
 
@@ -235,4 +236,4 @@ async def test_a_check_works_async(mock_lingua):
     result = await scanner.a_check("Hello world (english)")
 
     assert result.detected_language == "en"
-    assert result.threat_detected is False
+    assert result.status == SecurityStatus.SAFE

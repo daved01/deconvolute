@@ -1,8 +1,27 @@
+## [0.1.0a10] - 2026-02-12
+
+### 🚀 Features
+
+- Add mcp firewall feature and unify results objects
+
+### 📚 Documentation
+
+- Update readme and user guide to reflect new features (#17)
+
+### ⚙️ Miscellaneous Tasks
+
+- Rename detectors to scanner to reflect new focus (#13)
+- Rename guard to llm_guard (#14)
+- Refactor guards (#16)
 ## [0.1.0a9] - 2026-02-01
 
 ### 🚀 Features
 
 - Improve model imports (#12)
+
+### ⚙️ Miscellaneous Tasks
+
+- Prepare v0.1.0a9
 ## [0.1.0a8] - 2026-01-29
 
 ### 🚀 Features

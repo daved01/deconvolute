@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
 from re import Pattern
-from types import CodeType
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -56,5 +55,5 @@ class CompiledRule:
 
     tool_pattern: Pattern[str]
     action: PolicyAction
-    condition_code: CodeType | None
+    condition_code: str | None
     original_rule_str: str  # For logging

@@ -292,6 +292,7 @@ dependencies = [
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "pyyaml" },
+    { name = "simpleeval" },
     { name = "yara-python" },
 ]
 
@@ -315,6 +316,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.0" },
     { name = "pydantic-settings", specifier = ">=2.0" },
     { name = "pyyaml", specifier = ">=6.0" },
+    { name = "simpleeval", specifier = ">=1.0.3" },
     { name = "yara-python", specifier = ">=4.5.4" },
 ]
 
@@ -1201,6 +1203,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/f2/1c/d7b67ab43f30013b47c12b42d1acd354c195351a3f7a1d67f59e54227ede/ruff-0.14.10-py3-none-win32.whl", hash = "sha256:104c49fc7ab73f3f3a758039adea978869a918f31b73280db175b43a2d9b51d6", size = 13196187, upload-time = "2025-12-18T19:29:19.006Z" },
     { url = "https://files.pythonhosted.org/packages/fb/9c/896c862e13886fae2af961bef3e6312db9ebc6adc2b156fe95e615dee8c1/ruff-0.14.10-py3-none-win_amd64.whl", hash = "sha256:466297bd73638c6bdf06485683e812db1c00c7ac96d4ddd0294a338c62fdc154", size = 14661283, upload-time = "2025-12-18T19:29:30.16Z" },
     { url = "https://files.pythonhosted.org/packages/74/31/b0e29d572670dca3674eeee78e418f20bdf97fa8aa9ea71380885e175ca0/ruff-0.14.10-py3-none-win_arm64.whl", hash = "sha256:e51d046cf6dda98a4633b8a8a771451107413b0f07183b2bef03f075599e44e6", size = 13729839, upload-time = "2025-12-18T19:28:48.636Z" },
+]
+
+[[package]]
+name = "simpleeval"
+version = "1.0.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ff/6f/15be211749430f52f2c8f0c69158a6fc961c03aac93fa28d44d1a6f5ebc7/simpleeval-1.0.3.tar.gz", hash = "sha256:67bbf246040ac3b57c29cf048657b9cf31d4e7b9d6659684daa08ca8f1e45829", size = 24358, upload-time = "2024-11-02T10:29:46.912Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a0/e9/e58082fbb8cecbb6fb4133033c40cc50c248b1a331582be3a0f39138d65b/simpleeval-1.0.3-py3-none-any.whl", hash = "sha256:e3bdbb8c82c26297c9a153902d0fd1858a6c3774bf53ff4f134788c3f2035c38", size = 15762, upload-time = "2024-11-02T10:29:45.706Z" },
 ]
 
 [[package]]

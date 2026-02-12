@@ -69,21 +69,50 @@ def mock_threat_scanner():
 
 
 @pytest.fixture
-def clean_client():
+def mock_openai_module():
+    """
+    Patches sys.modules with a fake openai module containing OpenAI and AsyncOpenAI
+    classes.
+    """
+    fake_openai = MagicMock()
+
+    class FakeOpenAI:
+        pass
+
+    FakeOpenAI.__module__ = "openai"
+    FakeOpenAI.__name__ = "OpenAI"
+
+    class FakeAsyncOpenAI:
+        pass
+
+    FakeAsyncOpenAI.__module__ = "openai"
+    FakeAsyncOpenAI.__name__ = "AsyncOpenAI"
+
+    fake_openai.OpenAI = FakeOpenAI
+    fake_openai.AsyncOpenAI = FakeAsyncOpenAI
+
+    with patch.dict(sys.modules, {"openai": fake_openai}):
+        yield fake_openai
+
+
+@pytest.fixture
+def clean_client(mock_openai_module):
     """A Mock OpenAI-like client."""
-    # We fake the class structure to pass `type(client).__module__` checks
-    client = MagicMock()
+    client = MagicMock(spec=mock_openai_module.OpenAI)
+    # We also keep name/module for fallback logic if needed, but isinstance should win
     client.__class__.__name__ = "OpenAI"
     client.__class__.__module__ = "openai"
+    client.__class__ = mock_openai_module.OpenAI
     return client
 
 
 @pytest.fixture
-def async_clean_client():
+def async_clean_client(mock_openai_module):
     """A Mock AsyncOpenAI-like client."""
-    client = MagicMock()
+    client = MagicMock(spec=mock_openai_module.AsyncOpenAI)
     client.__class__.__name__ = "AsyncOpenAI"
     client.__class__.__module__ = "openai"
+    client.__class__ = mock_openai_module.AsyncOpenAI
     return client
 
 
@@ -115,6 +144,7 @@ def test_llm_guard_wrapper_sync(clean_client, mock_guard_defaults):
     mock_proxy_class = MagicMock()
     mock_module.OpenAIProxy = mock_proxy_class
 
+    # We mock deconvolute.clients.openai because llm_guard imports from it
     with patch.dict("sys.modules", {"deconvolute.clients.openai": mock_module}):
         result = llm_guard(clean_client)
 

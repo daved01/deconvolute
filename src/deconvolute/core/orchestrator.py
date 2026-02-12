@@ -39,6 +39,16 @@ def mcp_guard(client: T, policy_path: str = DEFAULT_MCP_POLICY_FILENAME) -> T:
     Raises:
         ConfigurationError: If the policy file is missing or invalid.
         DeconvoluteError: If the 'mcp' library is not installed.
+
+    Examples:
+        >>> from mcp import ClientSession
+        >>> from deconvolute import mcp_guard
+        >>>
+        >>> async with ClientSession(...) as session:
+        >>>     # Apply security policy
+        >>>     secure_session = mcp_guard(session, "policy.yaml")
+        >>>     # Use strictly as normal
+        >>>     await secure_session.initialize()
     """
     # Load & Validate Policy (Fails fast if missing)
     # We load this BEFORE importing the proxy to ensure configuration is valid.
@@ -95,6 +105,16 @@ def llm_guard(
     Raises:
         DeconvoluteError: If the client type is unsupported or if the required
             client library is not installed in the environment.
+
+    Examples:
+        >>> from openai import OpenAI
+        >>> from deconvolute import llm_guard
+        >>>
+        >>> client = OpenAI(api_key="...")
+        >>> secure_client = llm_guard(client)
+        >>>
+        >>> # Use as normal
+        >>> completion = secure_client.chat.completions.create(...)
     """
     # Load Defaults if needed
     if scanners is None:
@@ -104,37 +124,39 @@ def llm_guard(
     scanners = _resolve_configuration(scanners, api_key)
 
     # Client Inspection
-    # We use string inspection to avoid importing libraries that might not be installed.
+    # We attempt to import 'openai' to check isinstance.
+    try:
+        import openai
+
+        if isinstance(client, (openai.OpenAI, openai.AsyncOpenAI)):
+            try:
+                from deconvolute.clients.openai import AsyncOpenAIProxy, OpenAIProxy
+            except ImportError as e:
+                # If we confirmed it's an OpenAI client but can't load the proxy,
+                # it means the deconvolute installation is broken or environment issue.
+                raise DeconvoluteError(
+                    "Detected OpenAI client, but failed to import 'openai' library "
+                    f"support. Ensure it is installed: {e}"
+                ) from e
+
+            if isinstance(client, openai.AsyncOpenAI):
+                logger.debug("Deconvolute: Wrapping Async OpenAI client")
+                return AsyncOpenAIProxy(client, scanners, api_key)  # type: ignore
+            else:
+                logger.debug("Deconvolute: Wrapping Sync OpenAI client")
+                return OpenAIProxy(client, scanners, api_key)  # type: ignore
+
+    except ImportError:
+        pass
+
+    # If we are here, either openai isn't installed OR client is not an instance.
     client_type = type(client).__name__
     module_name = type(client).__module__
 
-    # Routing & Lazy Loading
-    # We only import the specific proxy implementation if we detect the client.
-
-    # OpenAI Support
     if "openai" in module_name:
-        try:
-            from deconvolute.clients.openai import AsyncOpenAIProxy, OpenAIProxy
-
-            # Detect Async vs Sync based on class name convention
-            if "Async" in client_type:
-                logger.debug(
-                    f"Deconvolute: Wrapping Async OpenAI client ({client_type})"
-                )
-                return AsyncOpenAIProxy(client, scanners, api_key)  # type: ignore
-            else:
-                logger.debug(
-                    f"Deconvolute: Wrapping Sync OpenAI client ({client_type})"
-                )
-                return OpenAIProxy(client, scanners, api_key)  # type: ignore
-
-        except ImportError as e:
-            # This handles the case where the object claims to be from 'openai'
-            # but the library cannot be imported (e.g. broken environment).
-            raise DeconvoluteError(
-                f"Detected OpenAI client, but failed to import 'openai' library. "
-                f"Ensure it is installed: {e}"
-            ) from e
+        # It claims to be openai.
+        # If we couldn't import openai, raising error is correct.
+        pass
 
     # Fallback: If we don't recognize the client, we must fail secure.
     raise DeconvoluteError(

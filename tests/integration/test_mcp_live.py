@@ -62,7 +62,7 @@ class TestLiveMCP:
                         "echo", arguments={"message": "Hello MCP"}
                     )
                     assert not result.isError
-                    assert result.content[0].text == "Echo: Hello MCP"  # type: ignore
+                    assert result.content[0].text == "Echo: Hello MCP"
 
                 # Test call_tool (Add)
                 if "add" in tool_names:
@@ -70,4 +70,4 @@ class TestLiveMCP:
                         "add", arguments={"a": 10, "b": 32}
                     )
                     assert not result.isError
-                    assert result.content[0].text == "42"  # type: ignore
+                    assert result.content[0].text == "42"

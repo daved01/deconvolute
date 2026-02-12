@@ -1,4 +1,4 @@
-from .core.orchestrator import a_scan, llm_guard, scan
+from .core.orchestrator import a_scan, llm_guard, mcp_guard, scan
 from .errors import DeconvoluteError, SecurityResultError
 from .models.security import SecurityResult
 from .scanners.content import (
@@ -12,6 +12,7 @@ __version__ = "0.1.0a9"
 
 __all__ = [
     "llm_guard",
+    "mcp_guard",
     "scan",
     "a_scan",
     "CanaryScanner",

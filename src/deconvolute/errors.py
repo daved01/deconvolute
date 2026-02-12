@@ -43,7 +43,6 @@ class MCPSessionError(DeconvoluteError):
     Examples:
     - Attempting to register a tool without a name.
     - Accessing a tool that was never registered (shadowing).
-    - Integrity mismatch (rug pull) if strict mode is enforcing exceptions.
     """
 
     pass

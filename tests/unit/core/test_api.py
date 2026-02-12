@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from deconvolute import DeconvoluteError
-from deconvolute.core.orchestrator import (
+from deconvolute.core.api import (
     _resolve_configuration,
     a_scan,
     llm_guard,
@@ -21,7 +21,7 @@ from deconvolute.scanners.base import BaseScanner
 @pytest.fixture
 def mock_guard_defaults():
     """Patches get_guard_defaults to return a safe list."""
-    with patch("deconvolute.core.orchestrator.get_guard_defaults") as mock:
+    with patch("deconvolute.core.api.get_guard_defaults") as mock:
         mock.return_value = []
         yield mock
 
@@ -29,7 +29,7 @@ def mock_guard_defaults():
 @pytest.fixture
 def mock_scan_defaults():
     """Patches get_scan_defaults to return a safe list."""
-    with patch("deconvolute.core.orchestrator.get_scan_defaults") as mock:
+    with patch("deconvolute.core.api.get_scan_defaults") as mock:
         mock.return_value = []
         yield mock
 
@@ -175,9 +175,7 @@ def test_llm_guard_unsupported_client(mock_guard_defaults):
 
 
 def test_scan_uses_scan_defaults():
-    with patch(
-        "deconvolute.core.orchestrator.get_scan_defaults"
-    ) as mock_get_scan_defaults:
+    with patch("deconvolute.core.api.get_scan_defaults") as mock_get_scan_defaults:
         mock_scanner = MagicMock()
         mock_scanner.check.return_value = MagicMock(status=SecurityStatus.SAFE)
         mock_scanner.check.return_value.safe = True  # Mock property
@@ -190,9 +188,7 @@ def test_scan_uses_scan_defaults():
 
 
 def test_llm_guard_uses_guard_defaults():
-    with patch(
-        "deconvolute.core.orchestrator.get_guard_defaults"
-    ) as mock_get_guard_defaults:
+    with patch("deconvolute.core.api.get_guard_defaults") as mock_get_guard_defaults:
         mock_client = MagicMock()
         # Mock client type to satisfy inspection checks
         mock_client.__class__.__module__ = "openai"

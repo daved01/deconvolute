@@ -6,7 +6,7 @@ from .scanners.content import (
     LanguageSecurityResult,
     SignatureScanner,
 )
-from .scanners.integrity import CanaryScanner, CanaryScanResult
+from .scanners.integrity import CanaryScanner, CanarySecurityResult
 
 __version__ = "0.1.0a9"
 
@@ -15,7 +15,7 @@ __all__ = [
     "scan",
     "a_scan",
     "CanaryScanner",
-    "CanaryScanResult",
+    "CanarySecurityResult",
     "SecurityResult",
     "LanguageScanner",
     "LanguageSecurityResult",

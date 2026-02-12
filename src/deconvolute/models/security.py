@@ -6,7 +6,9 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class SecurityStatus(str, Enum):
-    """The outcome of a security evaluation."""
+    """
+    The outcome of a security evaluation.
+    """
 
     SAFE = "safe"  # No threats found.
     WARNING = "warning"  # Policy violation detected but execution allowed (audit mode).
@@ -14,7 +16,9 @@ class SecurityStatus(str, Enum):
 
 
 class SecurityComponent(str, Enum):
-    """The system component that produced the result."""
+    """
+    The system component that produced the result.
+    """
 
     LANGUAGE_SCANNER = "LanguageScanner"
     CANARY_SCANNER = "CanaryScanner"

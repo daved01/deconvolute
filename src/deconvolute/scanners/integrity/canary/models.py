@@ -3,7 +3,7 @@ from pydantic import Field
 from deconvolute.models.security import SecurityComponent, SecurityResult
 
 
-class CanaryScanResult(SecurityResult):
+class CanarySecurityResult(SecurityResult):
     """
     Result model specific to the Canary Jailbreak Detection module.
 

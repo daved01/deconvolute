@@ -61,6 +61,12 @@ class MCPSessionRegistry:
         We canonicalize the data by:
         1. Extracting only functional fields (name, description, inputSchema).
         2. Sorting dictionary keys to ensure {a:1, b:2} == {b:2, a:1}.
+
+        Args:
+            tool_def: The tool definition dictionary to hash.
+
+        Returns:
+            The SHA-256 hash string of the canonicalized tool definition.
         """
         canonical_data = {
             "name": tool_def.get("name"),
@@ -83,6 +89,9 @@ class MCPSessionRegistry:
 
         Returns:
             The created ToolSnapshot object.
+
+        Raises:
+            MCPSessionError: If the tool definition is missing a name.
         """
         name = tool_def.get("name")
         if not name:
@@ -110,7 +119,7 @@ class MCPSessionRegistry:
 
         Args:
             tool_name: The name of the tool being called.
-            current_def: (Optional) The current definition of the tool.
+            current_def: The current definition of the tool.
                 If provided, we re-hash it to detect 'Rug Pull' attacks
                 where the definition changed since registration.
 

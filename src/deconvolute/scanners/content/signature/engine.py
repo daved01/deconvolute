@@ -98,7 +98,7 @@ class SignatureScanner(BaseScanner):
 
     def check(self, content: str, **kwargs: Any) -> SecurityResult:
         """
-        Synchronously scans the provided content against the loaded singature rules.
+        Synchronously scans the provided content against the loaded signature rules.
 
         This method performs a blocking scan. While underlying YARA is highly optimized,
         scanning very large documents may block the execution thread briefly.

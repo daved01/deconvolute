@@ -3,7 +3,7 @@ from typing import Any
 from deconvolute.scanners.base import BaseScanner
 
 
-class BaseProxy:
+class BaseLLMProxy:
     """
     Abstract Base Class for all Client Proxies.
 
@@ -37,9 +37,9 @@ class BaseProxy:
             api_key: Optional Deconvolute API key.
         """
         # Enforce Abstract Nature
-        if type(self) is BaseProxy:
+        if type(self) is BaseLLMProxy:
             raise TypeError(
-                "BaseProxy cannot be instantiated directly. Use a subclass."
+                "BaseLLMProxy cannot be instantiated directly. Use a subclass."
             )
 
         self._client = client

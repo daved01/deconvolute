@@ -24,21 +24,35 @@ def mcp_guard(client: T, policy_path: str = DEFAULT_MCP_POLICY_FILENAME) -> T:
     """
     Wraps an MCP ClientSession with the Deconvolute Firewall.
 
-    This acts as a transparent proxy that enforces the security policy defined
-    in 'deconvolute_policy.yaml'. It intercepts:
-    - Tool Discovery (list_tools): Hiding unauthorized tools.
-    - Tool Execution (call_tool): Blocking unauthorized or tampered calls.
+    The returned proxy looks and behaves exactly like a ``ClientSession``. Your
+    IDE autocompletion, type hints, and existing code all keep working. Under
+    the hood the proxy intercepts every MCP call and enforces the security
+    policy before forwarding it to the real session:
+
+    - **Tool Discovery** (``list_tools``): Hides tools the policy disallows.
+    - **Tool Execution** (``call_tool``): Raises ``SecurityResultError`` if the
+      tool is unauthorized or the arguments violate a policy constraint.
 
     Args:
-        client: The connected mcp.ClientSession instance.
-        policy_path: Path to the security policy file.
+        client: The connected ``mcp.ClientSession`` instance.
+        policy_path: Path to the security policy YAML file.
 
     Returns:
-        A proxy object that mimics the MCP ClientSession interface but enforces security
+        T: A proxy of the same type as *client* that enforces security.
 
     Raises:
         ConfigurationError: If the policy file is missing or invalid.
-        DeconvoluteError: If the 'mcp' library is not installed.
+        DeconvoluteError: If the ``mcp`` library is not installed.
+        SecurityResultError: At runtime, when a call violates the policy.
+
+    Examples:
+        >>> from mcp import ClientSession
+        >>> from deconvolute import mcp_guard
+        >>>
+        >>> async with ClientSession(...) as session:
+        >>>     secure_session = mcp_guard(session, "policy.yaml")
+        >>>     # Use exactly as normal. Violations raise a SecurityResultError
+        >>>     await secure_session.initialize()
     """
     # Load & Validate Policy (Fails fast if missing)
     # We load this BEFORE importing the proxy to ensure configuration is valid.
@@ -75,26 +89,40 @@ def llm_guard(
     """
     Wraps an LLM client with Deconvolute security defenses.
 
-    This function acts as a factory that inspects the provided client (e.g. OpenAI,
-    AsyncOpenAI), determines its type, and returns a transparent Proxy object that
-    intercepts API calls to enforce security policies.
+    The returned proxy is a drop-in replacement for your LLM client. The same
+    interface and same type hints apply. Every API call is transparently intercepted:
+    prompts are scanned **before** they reach the provider, and responses are
+    scanned **after** they arrive. If a threat is detected at either stage a
+    ``SecurityResultError`` is raised so you can handle it in your application.
 
     Args:
-        client: The original LLM client instance. Currently supports objects from
-            the 'openai' library (Sync and Async).
+        client: The original LLM client instance. Currently supports
+            ``openai.OpenAI`` and ``openai.AsyncOpenAI``.
         scanners: An optional list of configured scanner instances.
-            If None (default), the Standard Defense Suite is loaded (Canary + Language).
-            If a list is provided, only those scanners are used (Strict Mode).
-        api_key: The Deconvolute API key. If provided, it is injected into any
-            scanner that requires it but is missing configuration.
+            If ``None`` (default), the Standard Defense Suite is loaded
+            (Canary + Language). If a list is provided, only those scanners
+            are used (Strict Mode).
+        api_key: The Deconvolute API key. If provided, it is injected into
+            any scanner that requires it but is missing configuration.
 
     Returns:
-        A Proxy object that mimics the interface of the original client but
-        executes security checks on inputs (inject) and outputs (scan).
+        T: A proxy of the same type as *client* that enforces security.
 
     Raises:
         DeconvoluteError: If the client type is unsupported or if the required
             client library is not installed in the environment.
+        SecurityResultError: At runtime, when a threat is detected in prompts
+            or completions.
+
+    Examples:
+        >>> from openai import OpenAI
+        >>> from deconvolute import llm_guard
+        >>>
+        >>> client = OpenAI(api_key="...")
+        >>> secure_client = llm_guard(client)
+        >>>
+        >>> # Use as normal. Threats raise a SecurityResultError
+        >>> completion = secure_client.chat.completions.create(...)
     """
     # Load Defaults if needed
     if scanners is None:
@@ -104,37 +132,39 @@ def llm_guard(
     scanners = _resolve_configuration(scanners, api_key)
 
     # Client Inspection
-    # We use string inspection to avoid importing libraries that might not be installed.
+    # We attempt to import 'openai' to check isinstance.
+    try:
+        import openai
+
+        if isinstance(client, (openai.OpenAI, openai.AsyncOpenAI)):
+            try:
+                from deconvolute.clients.openai import AsyncOpenAIProxy, OpenAIProxy
+            except ImportError as e:
+                # If we confirmed it's an OpenAI client but can't load the proxy,
+                # it means the deconvolute installation is broken or environment issue.
+                raise DeconvoluteError(
+                    "Detected OpenAI client, but failed to import 'openai' library "
+                    f"support. Ensure it is installed: {e}"
+                ) from e
+
+            if isinstance(client, openai.AsyncOpenAI):
+                logger.debug("Deconvolute: Wrapping Async OpenAI client")
+                return AsyncOpenAIProxy(client, scanners, api_key)  # type: ignore
+            else:
+                logger.debug("Deconvolute: Wrapping Sync OpenAI client")
+                return OpenAIProxy(client, scanners, api_key)  # type: ignore
+
+    except ImportError:
+        pass
+
+    # If we are here, either openai isn't installed OR client is not an instance.
     client_type = type(client).__name__
     module_name = type(client).__module__
 
-    # Routing & Lazy Loading
-    # We only import the specific proxy implementation if we detect the client.
-
-    # OpenAI Support
     if "openai" in module_name:
-        try:
-            from deconvolute.clients.openai import AsyncOpenAIProxy, OpenAIProxy
-
-            # Detect Async vs Sync based on class name convention
-            if "Async" in client_type:
-                logger.debug(
-                    f"Deconvolute: Wrapping Async OpenAI client ({client_type})"
-                )
-                return AsyncOpenAIProxy(client, scanners, api_key)  # type: ignore
-            else:
-                logger.debug(
-                    f"Deconvolute: Wrapping Sync OpenAI client ({client_type})"
-                )
-                return OpenAIProxy(client, scanners, api_key)  # type: ignore
-
-        except ImportError as e:
-            # This handles the case where the object claims to be from 'openai'
-            # but the library cannot be imported (e.g. broken environment).
-            raise DeconvoluteError(
-                f"Detected OpenAI client, but failed to import 'openai' library. "
-                f"Ensure it is installed: {e}"
-            ) from e
+        # It claims to be openai.
+        # If we couldn't import openai, raising error is correct.
+        pass
 
     # Fallback: If we don't recognize the client, we must fail secure.
     raise DeconvoluteError(
@@ -151,18 +181,28 @@ def scan(
     """
     Synchronously scans a string for threats using the configured scanners.
 
-    This function is designed for 'Content' scanning in RAG pipelines (e.g. checking
-    retrieved documents) or tool outputs. It skips 'Integrity' checks (like Canary)
-    that require a conversational lifecycle.
+    Use this for **content-level** checks, e.g. RAG documents, tool outputs, or any
+    text you want to validate outside a conversational lifecycle. Unlike
+    ``llm_guard``, this function does not wrap a client; it takes a plain string
+    and returns a ``SecurityResult``.
 
     Args:
         content: The text string to analyze.
-        scanners: Optional list of scanners. If None, uses Standard Suite.
+        scanners: Optional list of scanners. If ``None``, uses the Standard
+            Suite (Language scanner only. Canary is omitted because it
+            requires a conversational lifecycle).
         api_key: Optional Deconvolute API key.
 
     Returns:
         SecurityResult: The result of the first scanner that found a threat,
-        or a clean result if all passed.
+        or a ``SAFE`` result if all scanners passed.
+
+    Examples:
+        >>> from deconvolute import scan
+        >>>
+        >>> result = scan(retrieved_document)
+        >>> if not result.safe:
+        ...     print(f"Blocked: {result.metadata}")
     """
     # Load Defaults if needed
     if scanners is None:
@@ -193,8 +233,15 @@ async def a_scan(
     """
     Asynchronously scans a string for threats.
 
-    See `scan()` for full documentation. This method is non-blocking and ideal
-    for high-throughput async pipelines (FastAPI, LangChain).
+    Non-blocking counterpart of ``scan()``. Ideal for async pipelines
+    (FastAPI, LangChain). See ``scan()`` for full parameter documentation.
+
+    Examples:
+        >>> from deconvolute import a_scan
+        >>>
+        >>> result = await a_scan(retrieved_document)
+        >>> if not result.safe:
+        ...     print(f"Blocked: {result.metadata}")
     """
     # Load Defaults if needed
     if scanners is None:

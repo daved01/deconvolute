@@ -49,6 +49,18 @@ class MCPProxy:
         self._session = session
         self._firewall = firewall
 
+    async def __aenter__(self) -> "MCPProxy":
+        """
+        Allow using the guarded session directly in 'async with'.
+        We enter the underlying session, but return 'self' (the Proxy).
+        """
+        await self._session.__aenter__()
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
+        """Pass context exit to the underlying session."""
+        await self._session.__aexit__(exc_type, exc_value, traceback)
+
     def __getattr__(self, name: str) -> Any:
         """Delegate any unknown methods (like list_resources) to the real session."""
         return getattr(self._session, name)

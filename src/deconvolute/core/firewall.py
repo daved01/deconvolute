@@ -35,8 +35,6 @@ class MCPFirewall:
         """
         self.policy = policy
         self.registry = MCPSessionRegistry()
-
-        # Compile the rules ONCE at startup
         self._compiled_rules: list[CompiledRule] = self._compile_rules(policy.rules)
 
     def _compile_rules(self, rules: list[Any]) -> list[CompiledRule]:
@@ -45,31 +43,15 @@ class MCPFirewall:
         """
         compiled = []
         for rule in rules:
-            # 1. Compile Tool Matcher (Wildcard -> Regex)
-            # Escape the string, then allow '*' to match anything
+            # Convert wildcard pattern to regex (e.g. "fs_*" -> "^fs_.*$")
             regex_str = "^" + re.escape(rule.tool).replace("\\*", ".*") + "$"
             pattern = re.compile(regex_str, re.IGNORECASE)
-
-            # 2. Compile Condition (String -> Code Object)
-            code_obj = None
-            if rule.condition:
-                try:
-                    # 'eval' mode compiles it for evaluation (returns a value)
-                    code_obj = compile(
-                        rule.condition, filename="<policy_rule>", mode="eval"
-                    )
-                except SyntaxError as e:
-                    logger.error(
-                        f"Firewall: Invalid condition syntax in rule '{rule.tool}': {e}"
-                    )
-                    # We skip the condition code, which effectively disables this rule
-                    continue
 
             compiled.append(
                 CompiledRule(
                     tool_pattern=pattern,
                     action=rule.action,
-                    condition_code=code_obj,
+                    condition_code=rule.condition,
                     original_rule_str=rule.tool,
                 )
             )
@@ -88,15 +70,16 @@ class MCPFirewall:
             return [self._dict_to_namespace(i) for i in data]
         return data
 
-    def _safe_eval(self, code_obj: Any, args: dict[str, Any]) -> bool:
+    def _safe_eval(self, expression: str, args: dict[str, Any]) -> bool:
         """
-        Safely executes pre-compiled condition code.
+        Safely executes condition code using simpleeval.
         """
         try:
+            from simpleeval import SimpleEval
+
             wrapped_args = self._dict_to_namespace(args)
-            safe_globals = {"__builtins__": None}
-            safe_locals = {"args": wrapped_args}
-            return bool(eval(code_obj, safe_globals, safe_locals))  # noqa: S307
+            s = SimpleEval(names={"args": wrapped_args})
+            return bool(s.eval(expression))
         except Exception as e:
             logger.warning(f"Firewall: Condition runtime error: {e}")
             return False

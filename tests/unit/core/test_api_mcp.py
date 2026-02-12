@@ -2,12 +2,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from deconvolute.core.orchestrator import mcp_guard
+from deconvolute.core.api import mcp_guard
 from deconvolute.errors import DeconvoluteError
 
 
-@patch("deconvolute.core.orchestrator.PolicyLoader")
-@patch("deconvolute.core.orchestrator.MCPFirewall")
+@patch("deconvolute.core.api.PolicyLoader")
+@patch("deconvolute.core.api.MCPFirewall")
 def test_mcp_guard_success(mock_firewall_cls, mock_policy_loader):
     # Setup
     mock_client = MagicMock()
@@ -30,7 +30,7 @@ def test_mcp_guard_success(mock_firewall_cls, mock_policy_loader):
                 assert result == MockProxy.return_value
 
 
-@patch("deconvolute.core.orchestrator.PolicyLoader")
+@patch("deconvolute.core.api.PolicyLoader")
 def test_mcp_guard_raises_error_when_mcp_missing(mock_policy_loader):
     mock_client = MagicMock()
 
@@ -41,7 +41,7 @@ def test_mcp_guard_raises_error_when_mcp_missing(mock_policy_loader):
             mcp_guard(mock_client)
 
 
-@patch("deconvolute.core.orchestrator.PolicyLoader")
+@patch("deconvolute.core.api.PolicyLoader")
 def test_mcp_guard_raises_import_error_directly(mock_policy_loader):
     # Simulate an import error by removing the module from sys.modules
     # This ensures that even if the import itself fails (e.g. syntax error or missing

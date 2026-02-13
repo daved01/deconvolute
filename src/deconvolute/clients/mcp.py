@@ -23,7 +23,14 @@ except ImportError:
 
 from deconvolute.core.firewall import MCPFirewall
 from deconvolute.core.types import ToolInterface
-from deconvolute.models.security import IntegrityLevel, SecurityStatus
+from deconvolute.models.security import (
+    IntegrityLevel,
+    SecurityComponent,
+    SecurityResult,
+    SecurityStatus,
+)
+from deconvolute.observability import get_backend
+from deconvolute.observability.models import AccessEvent, DiscoveryEvent
 from deconvolute.utils.logger import get_logger
 
 logger = get_logger()
@@ -107,7 +114,22 @@ class MCPProxy:
         # Filter & Register
         # The firewall returns only the allowed tool dicts
         allowed_data = self._firewall.check_tool_list(tools_data)
-        allowed_names = {t.get("name") for t in allowed_data}
+        allowed_names = {t["name"] for t in allowed_data}
+
+        # Observability Hook
+        backend = get_backend()
+        if backend:
+            all_names = {t["name"] for t in tools_data}
+            blocked_names = list(all_names - allowed_names)
+
+            event = DiscoveryEvent(
+                tools_found_count=len(tools_data),
+                tools_allowed_count=len(allowed_data),
+                tools_allowed=list(allowed_names),
+                tools_blocked=blocked_names,
+                server_info={},  # TODO: extract server info if available
+            )
+            await backend.log_discovery(event)
 
         # Reconstruct the result
         # We filter the original Pydantic objects to preserve data fidelity
@@ -148,6 +170,31 @@ class MCPProxy:
                 if found_tool:
                     current_tool_def = self._normalize_tool(found_tool)
                 else:
+                    # Tool vanished -> Synthetic Block
+                    # We create a fake SecurityResult to ensure it gets logged
+                    # properly below
+                    sec_result = SecurityResult(
+                        component=SecurityComponent.FIREWALL,
+                        status=SecurityStatus.UNSAFE,
+                        metadata={
+                            "reason": "tool_vanished",
+                            "integrity_check": "failed",
+                        },
+                    )
+                    # We handle the return immediately if strict check fails,
+                    # but we want to log it first.
+
+                    # Log the event for the vanished tool
+                    backend = get_backend()
+                    if backend:
+                        event = AccessEvent(
+                            tool_name=name,
+                            status=SecurityStatus.UNSAFE,
+                            reason="integrity_violation",
+                            metadata=sec_result.metadata,
+                        )
+                        await backend.log_access(event)
+
                     logger.warning(
                         f"MCPProxy (Strict): Tool '{name}' vanished from server "
                         "before execution."
@@ -163,22 +210,61 @@ class MCPProxy:
                         isError=True,
                     )
             except Exception as e:
-                logger.error(f"MCPProxy (Strict): Failed to re-verify tool: {e}")
-                return types.CallToolResult(
-                    content=[
-                        types.TextContent(
-                            type="text",
-                            text="🚫 Strict Integrity Check Failed: Could not contact "
-                            "server.",
+                try:
+                    logger.error(f"MCPProxy (Strict): Failed to re-verify tool: {e}")
+                    # Fail Closed
+                    return types.CallToolResult(
+                        content=[
+                            types.TextContent(
+                                type="text",
+                                text=(
+                                    "🚫 Strict Integrity Check Failed: "
+                                    "Could not contact server."
+                                ),
+                            )
+                        ],
+                        isError=True,
+                    )
+                finally:
+                    # Log the event for the system error
+                    backend = get_backend()
+                    if backend:
+                        # Construct event for failure
+                        event = AccessEvent(
+                            tool_name=name,
+                            status=SecurityStatus.UNSAFE,
+                            reason="integrity_check_error",
+                            metadata={
+                                "error": str(e),
+                                "component": "integrity_check",
+                            },
                         )
-                    ],
-                    isError=True,
-                )
+                        await backend.log_access(event)
 
         # Security Check
-        sec_result = self._firewall.check_tool_call(
-            name, safe_args, current_tool_def=current_tool_def
-        )
+        # If we didn't already fail the strict check above...
+        if "sec_result" not in locals():
+            sec_result = self._firewall.check_tool_call(
+                name, safe_args, current_tool_def=current_tool_def
+            )
+
+        # Observability Hook
+        backend = get_backend()
+        if backend:
+            # We map the SecurityResult into an AccessEvent
+            reason = sec_result.metadata.get("reason", "unknown")
+
+            # If it's safe, we usually don't have a specific reason, so we label it
+            if sec_result.status == SecurityStatus.SAFE:
+                reason = "policy_allow"
+
+            event = AccessEvent(
+                tool_name=name,
+                status=sec_result.status,
+                reason=reason,
+                metadata=sec_result.metadata,
+            )
+            await backend.log_access(event)
 
         if sec_result.status == SecurityStatus.UNSAFE:
             reason = sec_result.metadata.get("reason", "Blocked by policy")

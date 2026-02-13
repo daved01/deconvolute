@@ -11,6 +11,7 @@ from deconvolute.models.security import (
     SecurityResult,
     SecurityStatus,
 )
+from deconvolute.observability import configure_observability
 from deconvolute.scanners.base import BaseScanner
 from deconvolute.utils.logger import get_logger
 
@@ -24,6 +25,7 @@ def mcp_guard(
     client: T,
     policy_path: str = DEFAULT_MCP_POLICY_FILENAME,
     integrity: Literal["snapshot", "strict"] = "snapshot",
+    audit_log: str | None = None,
 ) -> T:
     """
     Wraps an MCP ClientSession with the Deconvolute Firewall.
@@ -46,6 +48,9 @@ def mcp_guard(
               at runtime.
             - "strict": Forces a re-verification of the tool definition before every
               execution. Prevents "Rug Pull" attacks but adds a network round-trip.
+        audit_log: Optional path to write a JSONL file to record all security events.
+            If provided, telemetry (Discovery and Access events) will be written
+            to this file asynchronously.
 
     Returns:
         A CallToolResult with isError=True if the tool is unauthorized.
@@ -73,7 +78,10 @@ def mcp_guard(
         >>>     else:
         >>>         print(f"Success: {result.content[0].text}")
     """
-    # Load & Validate Policy (Fails fast if missing)
+    # 1. Configure Observability (Singleton)
+    configure_observability(audit_log)
+
+    # 2. Load & Validate Policy (Fails fast if missing)
     # We load this BEFORE importing the proxy to ensure configuration is valid.
     policy = PolicyLoader.load(policy_path)
 

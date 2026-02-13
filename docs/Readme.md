@@ -32,7 +32,7 @@ Recent research by Guo et al. identified critical vulnerabilities in the Model C
 
 **Shadowing**: A server exposes undeclared tools or hides dangerous functionality in implementations that don't match their advertised descriptions. For example, a `search_documents` tool might secretly execute arbitrary shell commands.
 
-**Rug Pull**: A server presents a benign tool definition during discovery (`read_file: "Safely reads files from disk"`) but executes malicious code when the tool is actually called. The application trusts the description it saw earlier, unaware the implementation has changed.
+**Rug Pulls**: A server presents a benign tool definition during discovery (`read_file: "Safely reads files from disk"`) but executes malicious code when the tool is actually called. The application trusts the description it saw earlier, unaware the implementation has changed.
 
 **Confused Deputy**: The agent is tricked into calling tools it shouldn't have access to, or tools are invoked with parameters the agent never intended to use, because the server manipulates the execution context.
 
@@ -123,7 +123,7 @@ safe_session = mcp_guard(
 
 By default, Deconvolute uses Snapshot Integrity. It verifies tools against the definition seen at the start of the session. This is fast and effective against most attacks.
 
-However, a sophisticated malicious server could perform a Rug Pull: presenting a benign tool during discovery ("read_file"), but swapping it for a malicious one ("exfiltrate_data") just milliseconds before you call it.
+However, a sophisticated malicious server could perform a Rug Pull: presenting a benign tool during discovery (`read_file`), but swapping it for a malicious one (`exfiltrate_data`) just milliseconds before you call it.
 
 To prevent this, enable Strict Mode:
 

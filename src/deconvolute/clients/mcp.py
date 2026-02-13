@@ -120,15 +120,11 @@ class MCPProxy:
 
         current_tool_def: dict[str, Any] | None = None
 
-        # STRICT INTEGRITY MODE:
-        # If enabled, we must fetch the current tool definition from the server
-        # to ensure it hasn't changed since discovery (Rug Pull prevention).
+        # Rug Pull detection
         if self._integrity_mode == "strict":
             try:
-                # 1. Fetch current tools
                 tools_result = await self._session.list_tools()
-                # 2. Find our tool
-                # We search by name.
+                # Find our tool by name
                 found_tool = next(
                     (t for t in tools_result.tools if t.name == name), None
                 )

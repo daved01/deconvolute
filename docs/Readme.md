@@ -32,6 +32,8 @@ Recent research by Guo et al. identified critical vulnerabilities in the Model C
 
 **Shadowing**: A server exposes undeclared tools or hides dangerous functionality in implementations that don't match their advertised descriptions. For example, a `search_documents` tool might secretly execute arbitrary shell commands.
 
+**Rug Pull**: A server presents a benign tool definition during discovery (`read_file: "Safely reads files from disk"`) but executes malicious code when the tool is actually called. The application trusts the description it saw earlier, unaware the implementation has changed.
+
 **Confused Deputy**: The agent is tricked into calling tools it shouldn't have access to, or tools are invoked with parameters the agent never intended to use, because the server manipulates the execution context.
 
 These attacks bypass traditional content scanners because **the payload is in the infrastructure, not the text**. No amount of prompt inspection will detect a server that lies about what a tool does.
@@ -61,6 +63,7 @@ The Registry is ephemeral, which means it exists only for the lifetime of the se
 
 **Why This Works**:
 - **Shadowing is detectable**: Only tools explicitly allowed in your policy can be sealed. Undeclared tools fail at discovery time.
+- **Rug Pulls** are impossible: Any modification to a tool definition breaks the hash, preventing execution.
 - **Confused Deputy is mitigated**: The policy enforces which tools can be called. No tool can be invoked unless it's in the approved list.
 
 ### Usage
@@ -115,6 +118,31 @@ safe_session = mcp_guard(
     integrity="strict"  # Optional: Force re-verification on every call
 )
 ```
+
+#### Strict Integrity Mode (Rug Pull Protection)
+
+By default, Deconvolute uses Snapshot Integrity. It verifies tools against the definition seen at the start of the session. This is fast and effective against most attacks.
+
+However, a sophisticated malicious server could perform a Rug Pull: presenting a benign tool during discovery ("read_file"), but swapping it for a malicious one ("exfiltrate_data") just milliseconds before you call it.
+
+To prevent this, enable Strict Mode:
+
+```python
+safe_session = mcp_guard(
+    original_session,
+    integrity="strict"
+)
+```
+
+How it works:
+
+Before every tool call, the SDK silently re-fetches the tool definition from the server.
+
+- It re-hashes this live definition.
+- It compares the live hash against the approved Snapshot hash.
+- If they differ, the call is blocked immediately.
+
+Note: This adds one network round-trip per tool call, increasing latency slightly in exchange for maximum security.
 
 #### What a Shadowing Attack Looks Like When Blocked
 

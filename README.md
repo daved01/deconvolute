@@ -5,7 +5,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/deconvolute.svg?color=green)](https://pypi.org/project/deconvolute/)
 [![Supported Python versions](https://img.shields.io/badge/python->=3.11-blue.svg?)](https://pypi.org/project/deconvolute/)
 
-**Secure your MCP agents against tool shadowing and confused deputy attacks with a single wrapper.**
+**Secure your MCP agents against tool shadowing, rug pulls, and confused deputy attacks with a single wrapper.**
 
 When your AI agent calls tools on an MCP server, how do you know that `read_file` tool you discovered at session start is the same tool being executed 10 turns later? Deconvolute cryptographically seals tool definitions at discovery time to prevent tampering during execution, blocking infrastructure attacks that stateless scanners miss.
 
@@ -62,6 +62,7 @@ Stateless scanners inspect individual payloads but often miss infrastructure att
 
 This architecture prevents:
 - **Shadowing**: A server that exposes undeclared tools or hides malicious functionality
+- **Rug Pulls**: Servers that change a tool's definition between discovery and execution
 - **Confused Deputy**: Ensuring only approved tools from your policy can be invoked
 
 ### Policy-as-Code

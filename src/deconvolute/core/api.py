@@ -48,12 +48,11 @@ def mcp_guard(
               execution. Prevents "Rug Pull" attacks but adds a network round-trip.
 
     Returns:
-        T: A proxy of the same type as *client* that enforces security.
+        A CallToolResult with isError=True if the tool is unauthorized.
 
     Raises:
         ConfigurationError: If the policy file is missing or invalid.
         DeconvoluteError: If the ``mcp`` library is not installed.
-        SecurityResultError: At runtime, when a call violates the policy.
 
     Examples:
         >>> from mcp import ClientSession
@@ -63,6 +62,16 @@ def mcp_guard(
         >>>     secure_session = mcp_guard(session, "policy.yaml", integrity="strict")
         >>>     # Use exactly as normal. Violations raise a SecurityResultError
         >>>     await secure_session.initialize()
+        >>>
+        >>>     # Call a tool as normal
+        >>>     result = await secure_session.call_tool("read_file",{"path": "doc.txt"})
+        >>>
+        >>>     # Check for security blocks (standard MCP error handling)
+        >>>     if result.isError:
+        >>>         # This catches both Firewall blocks AND server-side errors
+        >>>         print(f"Operation failed: {result.content[0].text}")
+        >>>     else:
+        >>>         print(f"Success: {result.content[0].text}")
     """
     # Load & Validate Policy (Fails fast if missing)
     # We load this BEFORE importing the proxy to ensure configuration is valid.

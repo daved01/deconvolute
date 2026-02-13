@@ -5,6 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from deconvolute.core.types import ToolInterface
 from deconvolute.errors import MCPSessionError
 from deconvolute.utils.logger import get_logger
 
@@ -54,7 +55,7 @@ class MCPSessionRegistry:
         # The primary storage: Maps tool_name -> ToolSnapshot
         self._tools: dict[str, ToolSnapshot] = {}
 
-    def compute_hash(self, tool_def: dict[str, Any]) -> str:
+    def compute_hash(self, tool_def: ToolInterface) -> str:
         """
         Computes a deterministic SHA-256 hash of a tool definition.
 
@@ -68,17 +69,18 @@ class MCPSessionRegistry:
         Returns:
             The SHA-256 hash string of the canonicalized tool definition.
         """
+        # This is more stable than a Pydantic model because we control the dict.
         canonical_data = {
             "name": tool_def.get("name"),
             "description": tool_def.get("description"),
-            "inputSchema": tool_def.get("inputSchema"),
+            "input_schema": tool_def.get("input_schema"),
         }
         # sort_keys=True is CRITICAL for consistency across Python versions/platforms
         json_byte_string = json.dumps(canonical_data, sort_keys=True).encode("utf-8")
         return hashlib.sha256(json_byte_string).hexdigest()
 
     def register(
-        self, tool_def: dict[str, Any], metadata: dict[str, Any] | None = None
+        self, tool_def: ToolInterface, metadata: dict[str, Any] | None = None
     ) -> ToolSnapshot:
         """
         Registers a tool into the session.
@@ -102,7 +104,7 @@ class MCPSessionRegistry:
         snapshot = ToolSnapshot(
             name=name,
             description=tool_def.get("description"),
-            input_schema=tool_def.get("inputSchema", {}),
+            input_schema=tool_def.get("input_schema", {}),
             definition_hash=tool_hash,
             metadata=metadata or {},
         )
@@ -113,7 +115,7 @@ class MCPSessionRegistry:
         )
         return snapshot
 
-    def verify(self, tool_name: str, current_def: dict[str, Any] | None = None) -> bool:
+    def verify(self, tool_name: str, current_def: ToolInterface | None = None) -> bool:
         """
         Verifies the integrity of a tool.
 

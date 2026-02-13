@@ -60,11 +60,13 @@ async def test_list_tools_filtering_success(proxy, mock_session, mock_firewall):
     # Setup mock tools
     tool_a = MagicMock(name="ToolA")
     tool_a.name = "allowed_tool"
-    tool_a.model_dump.return_value = {"name": "allowed_tool"}
+    tool_a.description = "Allowed Tool Description"
+    tool_a.inputSchema = {"type": "object"}
 
     tool_b = MagicMock(name="ToolB")
     tool_b.name = "blocked_tool"
-    tool_b.model_dump.return_value = {"name": "blocked_tool"}
+    tool_b.description = "Blocked Tool Description"
+    tool_b.inputSchema = {"type": "object"}
 
     # Mock session response
     initial_result = MagicMock()
@@ -90,6 +92,33 @@ async def test_list_tools_filtering_success(proxy, mock_session, mock_firewall):
     mock_firewall.check_tool_list.assert_called_once()
     assert len(result.tools) == 1
     assert result.tools[0].name == "allowed_tool"
+
+
+@pytest.mark.asyncio
+async def test_normalize_tool_behavior(proxy):
+    # Case 1: Standard MCP Tool (camelCase inputSchema)
+    tool_camel = MagicMock()
+    tool_camel.name = "tool_camel"
+    tool_camel.description = "desc"
+    tool_camel.inputSchema = {"key": "val"}
+    # ensure input_schema attr doesn't exist to test fallback
+    del tool_camel.input_schema
+
+    norm_camel = proxy._normalize_tool(tool_camel)
+    assert norm_camel["name"] == "tool_camel"
+    assert norm_camel["input_schema"] == {"key": "val"}
+
+    # Case 2: Pythonic Tool (snake_case input_schema)
+    tool_snake = MagicMock()
+    tool_snake.name = "tool_snake"
+    tool_snake.description = "desc"
+    tool_snake.input_schema = {"key": "val_snake"}
+    # ensure inputSchema attr doesn't exist
+    del tool_snake.inputSchema
+
+    norm_snake = proxy._normalize_tool(tool_snake)
+    assert norm_snake["name"] == "tool_snake"
+    assert norm_snake["input_schema"] == {"key": "val_snake"}
 
 
 @pytest.mark.asyncio

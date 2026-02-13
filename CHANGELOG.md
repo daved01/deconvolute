@@ -1,3 +1,14 @@
+## [0.1.0a11] - 2026-02-13
+
+### 🚀 Features
+
+- Add integrity strict mode to mcp guard to detect rug pull attacks
+- Introduce ToolInterface TypedDict for mcp tool list for type safety
+- Add observability module
+
+### ⚙️ Miscellaneous Tasks
+
+- Fix warnings in test
 ## [0.1.0a10] - 2026-02-12
 
 ### 🚀 Features
@@ -13,6 +24,7 @@
 - Rename detectors to scanner to reflect new focus (#13)
 - Rename guard to llm_guard (#14)
 - Refactor guards (#16)
+- Prepare v0.1.0a10
 ## [0.1.0a9] - 2026-02-01
 
 ### 🚀 Features

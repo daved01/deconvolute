@@ -32,7 +32,18 @@ def mock_session():
         "inputSchema": {"type": "object"},
     }
 
-    session.list_tools.return_value.tools = [tool_a]
+    session.tools_list = [tool_a]
+
+    async def mock_list_tools(*args, **kwargs):
+        mock_result = MagicMock()
+        mock_result.tools = session.tools_list
+        # Simulate model_copy returning the same structure with updated tools
+        mock_result.model_copy.side_effect = lambda update: MagicMock(
+            tools=update["tools"]
+        )
+        return mock_result
+
+    session.list_tools = AsyncMock(side_effect=mock_list_tools)
     return session
 
 
@@ -99,7 +110,7 @@ async def test_strict_mode_blocks_vanished_tool(mock_session, mock_firewall):
     await proxy.list_tools()
 
     # 2. Tool vanishes!
-    mock_session.list_tools.return_value.tools = []
+    mock_session.tools_list = []
 
     # 3. Execution
     result = await proxy.call_tool("tool_a", {})

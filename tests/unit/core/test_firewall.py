@@ -187,7 +187,7 @@ def test_check_tool_call_integrity(firewall):
     # Unregistered tool (Phantom/Shadowing)
     result = firewall.check_tool_call("phantom.tool", {})
     assert result.status == SecurityStatus.UNSAFE
-    assert "not found in allowed session registry" in result.metadata["reason"]
+    assert "failed integrity check or is not registered" in result.metadata["reason"]
 
 
 def test_check_tool_call_policy_enforcement(firewall):

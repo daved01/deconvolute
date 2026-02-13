@@ -145,17 +145,24 @@ class MCPFirewall:
 
         return allowed_tools
 
-    def check_tool_call(self, tool_name: str, args: dict[str, Any]) -> SecurityResult:
+    def check_tool_call(
+        self,
+        tool_name: str,
+        args: dict[str, Any],
+        current_tool_def: dict[str, Any] | None = None,
+    ) -> SecurityResult:
         """
         Execution Phase: Validates a tool call before it hits the server.
 
         Checks:
         1. Integrity: Is the tool in the Registry? (Prevents Shadowing/Hallucinations)
+           - If current_tool_def is provided (Strict Mode), verifies it hasn't changed.
         2. Policy: Is this specific call allowed?
 
         Args:
             tool_name: The name of the tool call to validate.
             args: The arguments provided to the tool call.
+            current_tool_def: Optional current definition of the tool (for Strict Mode).
 
         Returns:
             SecurityResult:
@@ -165,13 +172,13 @@ class MCPFirewall:
         """
         # State/Integrity Check
         # We verify the tool exists in our trusted session registry.
-        if not self.registry.verify(tool_name):
+        if not self.registry.verify(tool_name, current_def=current_tool_def):
             return SecurityResult(
                 component=SecurityComponent.FIREWALL,
                 status=SecurityStatus.UNSAFE,
                 metadata={
-                    "reason": f"Tool '{tool_name}' not found in allowed session "
-                    "registry."
+                    "reason": f"Tool '{tool_name}' failed integrity check or is "
+                    "not registered."
                 },
             )
 

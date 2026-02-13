@@ -111,7 +111,8 @@ from deconvolute import mcp_guard
 
 safe_session = mcp_guard(
     original_session,
-    policy_path="./config/production_policy.yaml"
+    policy_path="./config/production_policy.yaml",
+    integrity="strict"  # Optional: Force re-verification on every call
 )
 ```
 

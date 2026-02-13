@@ -22,7 +22,7 @@ except ImportError:
     MCP_AVAILABLE = False
 
 from deconvolute.core.firewall import MCPFirewall
-from deconvolute.models.security import SecurityStatus
+from deconvolute.models.security import IntegrityLevel, SecurityStatus
 from deconvolute.utils.logger import get_logger
 
 logger = get_logger()
@@ -40,14 +40,21 @@ class MCPProxy:
     the underlying session.
     """
 
-    def __init__(self, session: ClientSession, firewall: MCPFirewall) -> None:
+    def __init__(
+        self,
+        session: ClientSession,
+        firewall: MCPFirewall,
+        integrity_mode: IntegrityLevel = "snapshot",
+    ) -> None:
         """
         Args:
             session: The original connected mcp.ClientSession.
             firewall: The configured enforcement engine.
+            integrity_mode: 'snapshot' (default) or 'strict'.
         """
         self._session = session
         self._firewall = firewall
+        self._integrity_mode = integrity_mode
 
     async def __aenter__(self) -> "MCPProxy":
         """
@@ -111,8 +118,55 @@ class MCPProxy:
         # Ensure arguments is a dict (mcp allows None, but firewall expects dict)
         safe_args = arguments or {}
 
+        current_tool_def: dict[str, Any] | None = None
+
+        # STRICT INTEGRITY MODE:
+        # If enabled, we must fetch the current tool definition from the server
+        # to ensure it hasn't changed since discovery (Rug Pull prevention).
+        if self._integrity_mode == "strict":
+            try:
+                # 1. Fetch current tools
+                tools_result = await self._session.list_tools()
+                # 2. Find our tool
+                # We search by name.
+                found_tool = next(
+                    (t for t in tools_result.tools if t.name == name), None
+                )
+
+                if found_tool:
+                    current_tool_def = found_tool.model_dump()
+                else:
+                    logger.warning(
+                        f"MCPProxy (Strict): Tool '{name}' vanished from server "
+                        "before execution."
+                    )
+                    return types.CallToolResult(
+                        content=[
+                            types.TextContent(
+                                type="text",
+                                text=f"🚫 Strict Integrity Violation: Tool '{name}' is "
+                                "no longer advertised by the server.",
+                            )
+                        ],
+                        isError=True,
+                    )
+            except Exception as e:
+                logger.error(f"MCPProxy (Strict): Failed to re-verify tool: {e}")
+                return types.CallToolResult(
+                    content=[
+                        types.TextContent(
+                            type="text",
+                            text="🚫 Strict Integrity Check Failed: Could not contact "
+                            "server.",
+                        )
+                    ],
+                    isError=True,
+                )
+
         # Security Check
-        sec_result = self._firewall.check_tool_call(name, safe_args)
+        sec_result = self._firewall.check_tool_call(
+            name, safe_args, current_tool_def=current_tool_def
+        )
 
         if sec_result.status == SecurityStatus.UNSAFE:
             reason = sec_result.metadata.get("reason", "Blocked by policy")

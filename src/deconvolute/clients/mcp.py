@@ -248,6 +248,14 @@ class MCPProxy:
                 name, safe_args, current_tool_def=current_tool_def
             )
 
+        if sec_result.status == SecurityStatus.UNSAFE and current_tool_def:
+            # Rug Pull / Integrity Violation Logic
+            # If we have the current definition (from strict mode check), include it.
+            # We do this here because the Firewall generates the result,
+            # but only the Proxy knows the *current* definition that caused the
+            # violation (since the firewall only has the safe snapshot).
+            sec_result.metadata["offending_definition"] = current_tool_def
+
         # Observability Hook
         backend = get_backend()
         if backend:

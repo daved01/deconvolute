@@ -1,4 +1,4 @@
-from typing import Any, cast
+from typing import Any
 
 # We perform top-level imports here because this file is only ever
 # imported if the user explicitly calls 'mcp_guard()', which implies
@@ -73,6 +73,22 @@ class MCPProxy:
         """Delegate any unknown methods (like list_resources) to the real session."""
         return getattr(self._session, name)
 
+    def _normalize_tool(self, tool: types.Tool | Any) -> ToolInterface:
+        """
+        Explicitly maps the MCP library type to our internal ToolInterface.
+        This isolates us from Pydantic serialization changes (aliases, versions).
+        """
+        # We try to access attributes directly.
+        # The MCP library likely exposes 'inputSchema' via alias or 'input_schema'.
+        # We check both to be robust.
+        schema = getattr(tool, "inputSchema", getattr(tool, "input_schema", {}))
+
+        return {
+            "name": tool.name,
+            "description": tool.description,
+            "input_schema": schema,
+        }
+
     async def list_tools(self, *args: Any, **kwargs: Any) -> types.ListToolsResult:
         """
         Intercepts tool discovery to hide blocked tools.
@@ -86,10 +102,8 @@ class MCPProxy:
         result = await self._session.list_tools(*args, **kwargs)
 
         # Convert to dicts for firewall analysis
-        # result.tools is a list[types.Tool] (Pydantic models)
-        # We explicitly cast to ToolInterface relative dicts
-        # cast is needed because model_dump returns dict[str, Any]
-        tools_data = cast(list[ToolInterface], [t.model_dump() for t in result.tools])
+        # MANUAL MAPPING: Fast & Stable
+        tools_data = [self._normalize_tool(t) for t in result.tools]
 
         # Filter & Register
         # The firewall returns only the allowed tool dicts
@@ -133,7 +147,7 @@ class MCPProxy:
                 )
 
                 if found_tool:
-                    current_tool_def = cast(ToolInterface, found_tool.model_dump())
+                    current_tool_def = self._normalize_tool(found_tool)
                 else:
                     logger.warning(
                         f"MCPProxy (Strict): Tool '{name}' vanished from server "

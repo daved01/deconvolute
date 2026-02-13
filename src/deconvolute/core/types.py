@@ -8,4 +8,4 @@ class ToolInterface(TypedDict, total=False):
 
     name: str
     description: str | None
-    inputSchema: dict[str, Any]
+    input_schema: dict[str, Any]

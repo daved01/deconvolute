@@ -21,12 +21,12 @@ class TestMCPSessionRegistry:
         tool_def_1 = {
             "name": "test_tool",
             "description": "A test tool",
-            "inputSchema": {"type": "object", "properties": {"a": 1}},
+            "input_schema": {"type": "object", "properties": {"a": 1}},
             "extra_field": "ignore_me",
         }
         tool_def_2 = {
             "extra_field": "ignore_me_too",
-            "inputSchema": {"type": "object", "properties": {"a": 1}},
+            "input_schema": {"type": "object", "properties": {"a": 1}},
             "description": "A test tool",
             "name": "test_tool",
         }
@@ -37,17 +37,17 @@ class TestMCPSessionRegistry:
         assert hash_1 == hash_2
 
         # Verify against manual calculation for a known simple input
-        simple_def = {"name": "foo", "description": "bar", "inputSchema": {}}
-        # Canonical: {"description": "bar", "inputSchema": {}, "name": "foo"}
+        simple_def = {"name": "foo", "description": "bar", "input_schema": {}}
+        # Canonical: {"description": "bar", "input_schema": {}, "name": "foo"}
         canonical_json = json.dumps(
-            {"description": "bar", "inputSchema": {}, "name": "foo"}, sort_keys=True
+            {"description": "bar", "input_schema": {}, "name": "foo"}, sort_keys=True
         ).encode("utf-8")
         expected_hash = hashlib.sha256(canonical_json).hexdigest()
         assert registry.compute_hash(simple_def) == expected_hash
 
     def test_register_success(self, registry):
         """Test registering a valid tool."""
-        tool_def = {"name": "my_tool", "description": "does things", "inputSchema": {}}
+        tool_def = {"name": "my_tool", "description": "does things", "input_schema": {}}
         metadata = {"source": "test"}
 
         snapshot = registry.register(tool_def, metadata)
@@ -71,7 +71,7 @@ class TestMCPSessionRegistry:
 
     def test_verify_known_tool(self, registry):
         """Test verify returns True for a known tool."""
-        tool_def = {"name": "safe_tool", "inputSchema": {}}
+        tool_def = {"name": "safe_tool", "input_schema": {}}
         registry.register(tool_def)
 
         assert registry.verify("safe_tool") is True
@@ -82,7 +82,7 @@ class TestMCPSessionRegistry:
 
     def test_verify_integrity_check_pass(self, registry):
         """Test verify passes when current definition matches registered hash."""
-        tool_def = {"name": "stable_tool", "description": "v1", "inputSchema": {}}
+        tool_def = {"name": "stable_tool", "description": "v1", "input_schema": {}}
         registry.register(tool_def)
 
         # Exact same definition
@@ -91,7 +91,7 @@ class TestMCPSessionRegistry:
         # Equivalent definition (different key order, extra fields ignored)
         equiv_def = {
             "name": "stable_tool",
-            "inputSchema": {},
+            "input_schema": {},
             "description": "v1",
             "extra": 1,
         }
@@ -99,14 +99,14 @@ class TestMCPSessionRegistry:
 
     def test_verify_integrity_check_fail(self, registry):
         """Test verify fails when current definition doesn't match registered hash."""
-        tool_def = {"name": "shifty_tool", "description": "v1", "inputSchema": {}}
+        tool_def = {"name": "shifty_tool", "description": "v1", "input_schema": {}}
         registry.register(tool_def)
 
         # Modified description
         changed_def = {
             "name": "shifty_tool",
             "description": "v2 (hacked)",
-            "inputSchema": {},
+            "input_schema": {},
         }
         assert registry.verify("shifty_tool", changed_def) is False
 

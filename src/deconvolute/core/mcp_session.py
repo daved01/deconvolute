@@ -73,7 +73,7 @@ class MCPSessionRegistry:
         canonical_data = {
             "name": tool_def.get("name"),
             "description": tool_def.get("description"),
-            "inputSchema": tool_def.get("inputSchema"),
+            "input_schema": tool_def.get("input_schema"),
         }
         # sort_keys=True is CRITICAL for consistency across Python versions/platforms
         json_byte_string = json.dumps(canonical_data, sort_keys=True).encode("utf-8")
@@ -104,7 +104,7 @@ class MCPSessionRegistry:
         snapshot = ToolSnapshot(
             name=name,
             description=tool_def.get("description"),
-            input_schema=tool_def.get("inputSchema", {}),
+            input_schema=tool_def.get("input_schema", {}),
             definition_hash=tool_hash,
             metadata=metadata or {},
         )

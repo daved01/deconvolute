@@ -10,11 +10,6 @@ from deconvolute.models.security import (
 )
 from deconvolute.observability.models import AccessEvent, DiscoveryEvent
 
-# Re-use the fixtures from mock_mcp_modules logic if possible,
-# but for simplicity and isolation, I'll redefine the critical ones here
-# or import them if I could. Since I can't easily import fixtures from another test file
-# without conftest.py, I will copy the minimal setup.
-
 
 @pytest.fixture
 def mock_mcp_modules():

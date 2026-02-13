@@ -74,9 +74,6 @@ async def test_local_file_backend_writes_async():
 
 @pytest.mark.asyncio
 async def test_local_file_backend_handles_io_errors(caplog):
-    # Use a directory where we (likely) don't have write permissions
-    # OR mock open to raise an exception. Mocking is safer and more reliable.
-
     backend = LocalFileBackend("dummy.jsonl")
 
     with patch("builtins.open", side_effect=OSError("Disk full")):

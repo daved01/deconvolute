@@ -144,6 +144,28 @@ Before every tool call, the SDK silently re-fetches the tool definition from the
 
 Note: This adds one network round-trip per tool call, increasing latency slightly in exchange for maximum security.
 
+#### Observability & Auditing
+
+You can enable local audit logging to track exactly how your policy is being enforced. This is useful for:
+1. **Debugging**: Seeing exactly why a tool was blocked.
+2. **Compliance**: Keeping a record of every tool execution attempt.
+3. **Forensics**: Analyzing tool usage patterns and potential attack attempts.
+
+Enable it by passing an `audit_log` path to the guard function:
+
+```python
+safe_session = mcp_guard(
+    original_session,
+    audit_log="./logs/mcp_audit.jsonl"
+)
+```
+
+The logger writes JSONL (JSON Lines) events for two types of activities:
+
+- **Discovery Events**: Logged when the session initializes. Records which tools were found on the server, which were allowed by your policy, and which were hidden (blocked).
+- **Access Events**: Logged every time a tool is called. Records the tool name, the security verdict (`SAFE` or `UNSAFE`), and the specific reason (e.g. policy violation, integrity check failure).
+
+
 #### What a Shadowing Attack Looks Like When Blocked
 
 ```python

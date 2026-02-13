@@ -86,6 +86,17 @@ mcp:
 
 The firewall loads this policy at runtime. If a blocked tool is called, the SDK blocks the request locally without contacting the server.
 
+### Audit Logging
+
+Deconvolute can produce a detailed audit log of every tool discovery and execution event, useful for debugging policy issues and maintaining a security paper trail.
+
+```python
+# Enable local JSONL logging
+safe_session = mcp_guard(
+    original_session,
+    audit_log="./logs/security_events.jsonl"
+)
+
 ## Defense in Depth
 
 The Firewall protects the infrastructure. Additional scanners protect the content.

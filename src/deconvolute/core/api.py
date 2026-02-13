@@ -1,5 +1,5 @@
 import os
-from typing import TypeVar
+from typing import Literal, TypeVar
 
 from deconvolute.constants import DEFAULT_MCP_POLICY_FILENAME
 from deconvolute.core.defaults import get_guard_defaults, get_scan_defaults
@@ -20,7 +20,11 @@ logger = get_logger()
 T = TypeVar("T")
 
 
-def mcp_guard(client: T, policy_path: str = DEFAULT_MCP_POLICY_FILENAME) -> T:
+def mcp_guard(
+    client: T,
+    policy_path: str = DEFAULT_MCP_POLICY_FILENAME,
+    integrity: Literal["snapshot", "strict"] = "snapshot",
+) -> T:
     """
     Wraps an MCP ClientSession with the Deconvolute Firewall.
 
@@ -36,23 +40,38 @@ def mcp_guard(client: T, policy_path: str = DEFAULT_MCP_POLICY_FILENAME) -> T:
     Args:
         client: The connected ``mcp.ClientSession`` instance.
         policy_path: Path to the security policy YAML file.
+        integrity: The integrity check mode.
+            - "snapshot" (Default): Verifies tools against the definition seen at
+              startup. Fast, but vulnerable if the server changes tool definitions
+              at runtime.
+            - "strict": Forces a re-verification of the tool definition before every
+              execution. Prevents "Rug Pull" attacks but adds a network round-trip.
 
     Returns:
-        T: A proxy of the same type as *client* that enforces security.
+        A CallToolResult with isError=True if the tool is unauthorized.
 
     Raises:
         ConfigurationError: If the policy file is missing or invalid.
         DeconvoluteError: If the ``mcp`` library is not installed.
-        SecurityResultError: At runtime, when a call violates the policy.
 
     Examples:
         >>> from mcp import ClientSession
         >>> from deconvolute import mcp_guard
         >>>
         >>> async with ClientSession(...) as session:
-        >>>     secure_session = mcp_guard(session, "policy.yaml")
+        >>>     secure_session = mcp_guard(session, "policy.yaml", integrity="strict")
         >>>     # Use exactly as normal. Violations raise a SecurityResultError
         >>>     await secure_session.initialize()
+        >>>
+        >>>     # Call a tool as normal
+        >>>     result = await secure_session.call_tool("read_file",{"path": "doc.txt"})
+        >>>
+        >>>     # Check for security blocks (standard MCP error handling)
+        >>>     if result.isError:
+        >>>         # This catches both Firewall blocks AND server-side errors
+        >>>         print(f"Operation failed: {result.content[0].text}")
+        >>>     else:
+        >>>         print(f"Success: {result.content[0].text}")
     """
     # Load & Validate Policy (Fails fast if missing)
     # We load this BEFORE importing the proxy to ensure configuration is valid.
@@ -75,12 +94,15 @@ def mcp_guard(client: T, policy_path: str = DEFAULT_MCP_POLICY_FILENAME) -> T:
             "in your environment to use mcp_guard()."
         ) from e
 
-    logger.debug(f"Deconvolute: Wrapping MCP Client with policy '{policy_path}'")
+    logger.debug(
+        f"Deconvolute: Wrapping MCP Client with policy '{policy_path}' "
+        f"(Integrity: {integrity})"
+    )
 
     # Return the wrapped client
     # We ignore return-value because MCPProxy dynamically mimics T
     # We ignore arg-type because client is T but MCPProxy expects ClientSession
-    return MCPProxy(client, firewall)  # type: ignore[return-value, arg-type]
+    return MCPProxy(client, firewall, integrity_mode=integrity)  # type: ignore[return-value, arg-type]
 
 
 def llm_guard(

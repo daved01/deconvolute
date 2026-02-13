@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -13,6 +13,9 @@ class SecurityStatus(str, Enum):
     SAFE = "safe"  # No threats found.
     WARNING = "warning"  # Policy violation detected but execution allowed (audit mode).
     UNSAFE = "unsafe"  # Threat detected or Policy violation.
+
+
+IntegrityLevel = Literal["snapshot", "strict"]
 
 
 class SecurityComponent(str, Enum):

@@ -108,7 +108,9 @@ async def test_call_tool_allowed(proxy, mock_session, mock_firewall):
     result = await proxy.call_tool(tool_name, arguments=args)
 
     # Verify
-    mock_firewall.check_tool_call.assert_called_once_with(tool_name, args)
+    mock_firewall.check_tool_call.assert_called_once_with(
+        tool_name, args, current_tool_def=None
+    )
     mock_session.call_tool.assert_called_once_with(tool_name, args)
     assert result == "success"
 
@@ -139,7 +141,9 @@ async def test_call_tool_blocked(proxy, mock_session, mock_firewall, mock_mcp_mo
     result = await proxy.call_tool(tool_name, arguments=args)
 
     # Verify
-    mock_firewall.check_tool_call.assert_called_once_with(tool_name, args)
+    mock_firewall.check_tool_call.assert_called_once_with(
+        tool_name, args, current_tool_def=None
+    )
     mock_session.call_tool.assert_not_called()
     assert result.isError is True
     assert "Security Violation: bad tool" in result.content[0].text
@@ -163,6 +167,8 @@ async def test_call_tool_warning(proxy, mock_session, mock_firewall):
     result = await proxy.call_tool(tool_name, arguments=args)
 
     # Verify
-    mock_firewall.check_tool_call.assert_called_once_with(tool_name, args)
+    mock_firewall.check_tool_call.assert_called_once_with(
+        tool_name, args, current_tool_def=None
+    )
     mock_session.call_tool.assert_called_once_with(tool_name, args)
     assert result == "success"

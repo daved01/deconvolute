@@ -25,7 +25,9 @@ def test_mcp_guard_success(mock_firewall_cls, mock_policy_loader):
                 )
                 mock_firewall_cls.assert_called_once()
                 MockProxy.assert_called_once_with(
-                    mock_client, mock_firewall_cls.return_value
+                    mock_client,
+                    mock_firewall_cls.return_value,
+                    integrity_mode="snapshot",
                 )
                 assert result == MockProxy.return_value
 

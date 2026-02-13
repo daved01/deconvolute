@@ -3,6 +3,7 @@ from types import SimpleNamespace
 from typing import Any
 
 from deconvolute.core.mcp_session import MCPSessionRegistry
+from deconvolute.core.types import ToolInterface
 from deconvolute.models.policy import (
     CompiledRule,
     PolicyAction,
@@ -109,7 +110,7 @@ class MCPFirewall:
 
         return final_action
 
-    def check_tool_list(self, tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def check_tool_list(self, tools: list[ToolInterface]) -> list[ToolInterface]:
         """
         Discovery Phase: Filters available tools against the policy.
 
@@ -149,7 +150,7 @@ class MCPFirewall:
         self,
         tool_name: str,
         args: dict[str, Any],
-        current_tool_def: dict[str, Any] | None = None,
+        current_tool_def: ToolInterface | None = None,
     ) -> SecurityResult:
         """
         Execution Phase: Validates a tool call before it hits the server.

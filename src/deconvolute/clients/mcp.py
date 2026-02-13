@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 # We perform top-level imports here because this file is only ever
 # imported if the user explicitly calls 'mcp_guard()', which implies
@@ -22,6 +22,7 @@ except ImportError:
     MCP_AVAILABLE = False
 
 from deconvolute.core.firewall import MCPFirewall
+from deconvolute.core.types import ToolInterface
 from deconvolute.models.security import IntegrityLevel, SecurityStatus
 from deconvolute.utils.logger import get_logger
 
@@ -86,12 +87,14 @@ class MCPProxy:
 
         # Convert to dicts for firewall analysis
         # result.tools is a list[types.Tool] (Pydantic models)
-        tools_data = [t.model_dump() for t in result.tools]
+        # We explicitly cast to ToolInterface relative dicts
+        # cast is needed because model_dump returns dict[str, Any]
+        tools_data = cast(list[ToolInterface], [t.model_dump() for t in result.tools])
 
         # Filter & Register
         # The firewall returns only the allowed tool dicts
         allowed_data = self._firewall.check_tool_list(tools_data)
-        allowed_names = {t["name"] for t in allowed_data}
+        allowed_names = {t.get("name") for t in allowed_data}
 
         # Reconstruct the result
         # We filter the original Pydantic objects to preserve data fidelity
@@ -118,7 +121,7 @@ class MCPProxy:
         # Ensure arguments is a dict (mcp allows None, but firewall expects dict)
         safe_args = arguments or {}
 
-        current_tool_def: dict[str, Any] | None = None
+        current_tool_def: ToolInterface | None = None
 
         # Rug Pull detection
         if self._integrity_mode == "strict":
@@ -130,7 +133,7 @@ class MCPProxy:
                 )
 
                 if found_tool:
-                    current_tool_def = found_tool.model_dump()
+                    current_tool_def = cast(ToolInterface, found_tool.model_dump())
                 else:
                     logger.warning(
                         f"MCPProxy (Strict): Tool '{name}' vanished from server "

@@ -161,3 +161,31 @@ async def test_call_tool_logs_integrity_violation(proxy, mock_mcp_modules):
         assert event.status == SecurityStatus.UNSAFE
         assert event.reason == "integrity_violation"
         assert event.metadata["reason"] == "tool_vanished"
+
+
+@pytest.mark.asyncio
+async def test_call_tool_logs_strict_error(proxy, mock_mcp_modules):
+    """Test that system errors during strict check are logged to audit."""
+    # Enable strict mode
+    proxy._integrity_mode = "strict"
+
+    mock_backend = AsyncMock()
+    with patch("deconvolute.clients.mcp.get_backend", return_value=mock_backend):
+        # Mock list_tools to raise a network/system error
+        proxy._session.list_tools.side_effect = Exception("Network Down")
+
+        # Mock CallToolResult
+        types_mock = mock_mcp_modules
+        types_mock.CallToolResult.return_value = MagicMock(isError=True)
+
+        # Execute
+        await proxy.call_tool("any_tool")
+
+        # Verify
+        mock_backend.log_access.assert_called_once()
+        event = mock_backend.log_access.call_args[0][0]
+        assert isinstance(event, AccessEvent)
+        assert event.tool_name == "any_tool"
+        assert event.status == SecurityStatus.UNSAFE
+        assert event.reason == "integrity_check_error"
+        assert event.metadata["error"] == "Network Down"

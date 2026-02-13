@@ -210,18 +210,36 @@ class MCPProxy:
                         isError=True,
                     )
             except Exception as e:
-                logger.error(f"MCPProxy (Strict): Failed to re-verify tool: {e}")
-                # Fail Closed
-                return types.CallToolResult(
-                    content=[
-                        types.TextContent(
-                            type="text",
-                            text="🚫 Strict Integrity Check Failed: Could not contact "
-                            "server.",
+                try:
+                    logger.error(f"MCPProxy (Strict): Failed to re-verify tool: {e}")
+                    # Fail Closed
+                    return types.CallToolResult(
+                        content=[
+                            types.TextContent(
+                                type="text",
+                                text=(
+                                    "🚫 Strict Integrity Check Failed: "
+                                    "Could not contact server."
+                                ),
+                            )
+                        ],
+                        isError=True,
+                    )
+                finally:
+                    # Log the event for the system error
+                    backend = get_backend()
+                    if backend:
+                        # Construct event for failure
+                        event = AccessEvent(
+                            tool_name=name,
+                            status=SecurityStatus.UNSAFE,
+                            reason="integrity_check_error",
+                            metadata={
+                                "error": str(e),
+                                "component": "integrity_check",
+                            },
                         )
-                    ],
-                    isError=True,
-                )
+                        await backend.log_access(event)
 
         # Security Check
         # If we didn't already fail the strict check above...

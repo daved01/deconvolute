@@ -74,14 +74,13 @@ version: "1.0"
 
 default_action: "block"
 
-mcp:
-  allowed_tools:
-    # Add the specific tools your agent needs here.
-    # Any tool not listed below is automatically blocked.
-    - tool: "read_file"
-      action: "allow"
-    - tool: "search_documents"
-      action: "allow"
+rules:
+  # Add the specific tools your agent needs here.
+  # Any tool not listed below is automatically blocked.
+  - tool: "read_file"
+    action: "allow"
+  - tool: "search_documents"
+    action: "allow"
 ```
 
 The firewall loads this policy at runtime. If a blocked tool is called, the SDK blocks the request locally without contacting the server.

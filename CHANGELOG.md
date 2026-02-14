@@ -1,3 +1,16 @@
+## [0.1.0a12] - 2026-02-14
+
+### 🚀 Features
+
+- Add capturing of malicious tool definitions for logs
+
+### 📚 Documentation
+
+- Clean up documentation
+
+### ⚙️ Miscellaneous Tasks
+
+- Fix logic to register tools on first use
 ## [0.1.0a11] - 2026-02-13
 
 ### 🚀 Features
@@ -9,6 +22,7 @@
 ### ⚙️ Miscellaneous Tasks
 
 - Fix warnings in test
+- Prepare v0.1.0a11
 ## [0.1.0a10] - 2026-02-12
 
 ### 🚀 Features

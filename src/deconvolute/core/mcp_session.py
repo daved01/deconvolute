@@ -85,6 +85,9 @@ class MCPSessionRegistry:
         """
         Registers a tool into the session.
 
+        Implements Trust-On-First-Use (TOFU): If a tool is already registered,
+        we do NOT overwrite it. We keep the original 'snapshot' as the source of truth.
+
         Args:
             tool_def: The raw dictionary from the MCP 'list_tools' response.
             metadata: Optional extra context to attach to the snapshot.
@@ -98,6 +101,16 @@ class MCPSessionRegistry:
         name = tool_def.get("name")
         if not name:
             raise MCPSessionError("Cannot register a tool without a name.")
+
+        # Trust On First Use
+        # If we have seen this tool before, we refuse to update the definition.
+        # This ensures our snapshot remains pinned to the benign state.
+        if name in self._tools:
+            logger.debug(
+                f"SessionRegistry: Ignoring update for pinned tool '{name}'. "
+                "Keeping original snapshot."
+            )
+            return self._tools[name]
 
         tool_hash = self.compute_hash(tool_def)
 

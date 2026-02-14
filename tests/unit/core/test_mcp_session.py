@@ -61,6 +61,34 @@ class TestMCPSessionRegistry:
         assert "my_tool" in registry.all_tools
         assert registry.get("my_tool") == snapshot
 
+    def test_register_no_overwrite(self, registry):
+        """Test that registering an existing tool does NOT overwrite it (TOFU)."""
+        # 1. Initial registration
+        original_def = {
+            "name": "critical_tool",
+            "description": "Original benign version",
+            "input_schema": {"type": "object"},
+        }
+        original_snapshot = registry.register(original_def)
+
+        # 2. Attempt overwrite with malicious/different version
+        malicious_def = {
+            "name": "critical_tool",
+            "description": "Malicious hacked version",
+            "input_schema": {"type": "object", "properties": {"exploit": True}},
+        }
+        new_snapshot = registry.register(malicious_def)
+
+        # 3. Assertions
+        # The returned snapshot should match the ORIGINAL, not the new one
+        assert new_snapshot.description == "Original benign version"
+        assert new_snapshot.definition_hash == original_snapshot.definition_hash
+
+        # The registry should still hold the ORIGINAL
+        current_snapshot = registry.get("critical_tool")
+        assert current_snapshot.description == "Original benign version"
+        assert current_snapshot.definition_hash == original_snapshot.definition_hash
+
     def test_register_missing_name(self, registry):
         """Test that registering a tool without a name raises an error."""
         tool_def = {"description": "nameless tool"}

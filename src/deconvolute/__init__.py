@@ -8,7 +8,7 @@ from .scanners.content import (
 )
 from .scanners.integrity import CanaryScanner, CanarySecurityResult
 
-__version__ = "0.1.0a12"
+__version__ = "0.1.0a13"
 
 __all__ = [
     "llm_guard",

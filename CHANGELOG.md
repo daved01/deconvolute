@@ -1,3 +1,12 @@
+## [0.1.0a13] - 2026-02-15
+
+### 🚀 Features
+
+- Add enhanced observability model
+
+### 📚 Documentation
+
+- Update docs
 ## [0.1.0a12] - 2026-02-14
 
 ### 🚀 Features
@@ -11,6 +20,7 @@
 ### ⚙️ Miscellaneous Tasks
 
 - Fix logic to register tools on first use
+- Prepare v0.1.0a12
 ## [0.1.0a11] - 2026-02-13
 
 ### 🚀 Features

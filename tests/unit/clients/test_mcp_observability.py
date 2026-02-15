@@ -3,12 +3,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from deconvolute.models.observability import AccessEvent, DiscoveryEvent
 from deconvolute.models.security import (
     SecurityComponent,
     SecurityResult,
     SecurityStatus,
 )
-from deconvolute.observability.models import AccessEvent, DiscoveryEvent
 
 
 @pytest.fixture
@@ -54,8 +54,13 @@ async def test_list_tools_logs_discovery(proxy):
         # Setup tools
         tool_a = MagicMock(name="ToolA")
         tool_a.name = "allowed"
+        tool_a.description = "Allowed tool"
+        tool_a.inputSchema = {}
+
         tool_b = MagicMock(name="ToolB")
         tool_b.name = "blocked"
+        tool_b.description = "Blocked tool"
+        tool_b.inputSchema = {}
 
         # Mock session
         initial_result = MagicMock()
@@ -65,6 +70,9 @@ async def test_list_tools_logs_discovery(proxy):
 
         # Mock firewall
         proxy._firewall.check_tool_list.return_value = [{"name": "allowed"}]
+        mock_snapshot = MagicMock()
+        mock_snapshot.definition_hash = "hash_123"
+        proxy._firewall.registry.get.return_value = mock_snapshot
 
         # Execute
         await proxy.list_tools()
@@ -75,8 +83,8 @@ async def test_list_tools_logs_discovery(proxy):
         assert isinstance(event, DiscoveryEvent)
         assert event.tools_found_count == 2
         assert event.tools_allowed_count == 1
-        assert "allowed" in event.tools_allowed
-        assert "blocked" in event.tools_blocked
+        assert any(t.name == "allowed" for t in event.tools_allowed)
+        assert any(t.name == "blocked" for t in event.tools_blocked)
 
 
 @pytest.mark.asyncio

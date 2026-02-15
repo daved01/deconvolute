@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from deconvolute.observability.models import AccessEvent, DiscoveryEvent
+from deconvolute.models.observability import AccessEvent, DiscoveryEvent
 
 
 class ObservabilityBackend(ABC):

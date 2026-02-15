@@ -1,5 +1,7 @@
 from typing import Any
 
+from deconvolute.models.observability import ToolData
+
 # We perform top-level imports here because this file is only ever
 # imported if the user explicitly calls 'mcp_guard()', which implies
 # they have the 'mcp' library installed.
@@ -23,6 +25,7 @@ except ImportError:
 
 from deconvolute.core.firewall import MCPFirewall
 from deconvolute.core.types import ToolInterface
+from deconvolute.models.observability import AccessEvent, DiscoveryEvent
 from deconvolute.models.security import (
     IntegrityLevel,
     SecurityComponent,
@@ -30,7 +33,6 @@ from deconvolute.models.security import (
     SecurityStatus,
 )
 from deconvolute.observability import get_backend
-from deconvolute.observability.models import AccessEvent, DiscoveryEvent
 from deconvolute.utils.logger import get_logger
 
 logger = get_logger()
@@ -119,14 +121,41 @@ class MCPProxy:
         # Observability Hook
         backend = get_backend()
         if backend:
-            all_names = {t["name"] for t in tools_data}
-            blocked_names = list(all_names - allowed_names)
+            # Helper to build ToolData from our internal interface
+            def build_tool_data(tool_def: ToolInterface, is_allowed: bool) -> ToolData:
+                tool_hash = None
+                if is_allowed:
+                    # If allowed, we can get the authoritative hash from the registry
+                    snapshot = self._firewall.registry.get(tool_def["name"])
+                    if snapshot:
+                        tool_hash = snapshot.definition_hash
+
+                return ToolData(
+                    name=tool_def["name"],
+                    description=tool_def.get("description"),
+                    input_schema=tool_def.get("input_schema", {}),
+                    definition_hash=tool_hash,
+                )
+
+            # Separate allowed vs blocked for the log
+            allowed_event_data = []
+            blocked_event_data = []
+
+            for tool_def in tools_data:
+                if tool_def["name"] in allowed_names:
+                    allowed_event_data.append(
+                        build_tool_data(tool_def, is_allowed=True)
+                    )
+                else:
+                    blocked_event_data.append(
+                        build_tool_data(tool_def, is_allowed=False)
+                    )
 
             event = DiscoveryEvent(
                 tools_found_count=len(tools_data),
                 tools_allowed_count=len(allowed_data),
-                tools_allowed=list(allowed_names),
-                tools_blocked=blocked_names,
+                tools_allowed=allowed_event_data,
+                tools_blocked=blocked_event_data,
                 server_info={},  # TODO: extract server info if available
             )
             await backend.log_discovery(event)
@@ -250,11 +279,18 @@ class MCPProxy:
 
         if sec_result.status == SecurityStatus.UNSAFE and current_tool_def:
             # Rug Pull / Integrity Violation Logic
-            # If we have the current definition (from strict mode check), include it.
-            # We do this here because the Firewall generates the result,
-            # but only the Proxy knows the *current* definition that caused the
-            # violation (since the firewall only has the safe snapshot).
+            # We include both the OFFENDING definition (from server) and the
+            # TRUSTED definition (from registry) so the UI can render a Diff.
             sec_result.metadata["offending_definition"] = current_tool_def
+
+            trusted_snapshot = self._firewall.registry.get(name)
+            if trusted_snapshot:
+                # Reconstruct interface from snapshot for the log
+                sec_result.metadata["trusted_definition"] = {
+                    "name": trusted_snapshot.name,
+                    "description": trusted_snapshot.description,
+                    "input_schema": trusted_snapshot.input_schema,
+                }
 
         # Observability Hook
         backend = get_backend()

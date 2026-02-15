@@ -3,8 +3,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from deconvolute.models.observability import AccessEvent, DiscoveryEvent
 from deconvolute.observability.base import ObservabilityBackend
-from deconvolute.observability.models import AccessEvent, DiscoveryEvent
 from deconvolute.utils.logger import get_logger
 
 logger = get_logger()

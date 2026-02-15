@@ -1,3 +1,8 @@
+## [0.1.0a14] - 2026-02-15
+
+### 🚀 Features
+
+- Add client session id and logging of hash for better observability diff
 ## [0.1.0a13] - 2026-02-15
 
 ### 🚀 Features
@@ -7,6 +12,10 @@
 ### 📚 Documentation
 
 - Update docs
+
+### ⚙️ Miscellaneous Tasks
+
+- Prepare v0.1.0a13
 ## [0.1.0a12] - 2026-02-14
 
 ### 🚀 Features

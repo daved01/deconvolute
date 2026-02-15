@@ -1,3 +1,4 @@
+import uuid
 from typing import Any
 
 from deconvolute.models.observability import ToolData
@@ -65,6 +66,7 @@ class MCPProxy:
         self._session = session
         self._firewall = firewall
         self._integrity_mode = integrity_mode
+        self._client_session_id = str(uuid.uuid4())
 
     async def __aenter__(self) -> "MCPProxy":
         """
@@ -152,6 +154,7 @@ class MCPProxy:
                     )
 
             event = DiscoveryEvent(
+                client_session_id=self._client_session_id,
                 tools_found_count=len(tools_data),
                 tools_allowed_count=len(allowed_data),
                 tools_allowed=allowed_event_data,
@@ -283,6 +286,10 @@ class MCPProxy:
             # TRUSTED definition (from registry) so the UI can render a Diff.
             sec_result.metadata["offending_definition"] = current_tool_def
 
+            sec_result.metadata["offending_hash"] = (
+                self._firewall.registry.compute_hash(current_tool_def)
+            )
+
             trusted_snapshot = self._firewall.registry.get(name)
             if trusted_snapshot:
                 # Reconstruct interface from snapshot for the log
@@ -291,6 +298,7 @@ class MCPProxy:
                     "description": trusted_snapshot.description,
                     "input_schema": trusted_snapshot.input_schema,
                 }
+                sec_result.metadata["trusted_hash"] = trusted_snapshot.definition_hash
 
         # Observability Hook
         backend = get_backend()
@@ -303,6 +311,7 @@ class MCPProxy:
                 reason = "policy_allow"
 
             event = AccessEvent(
+                client_session_id=self._client_session_id,
                 tool_name=name,
                 status=sec_result.status,
                 reason=reason,

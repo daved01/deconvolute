@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "deconvolute"
 dynamic = ["version"]
-description = "Deconvolute is a defense-in-depth SDK designed to secure every stage of your Retrieval Augmented Generation (RAG) pipeline."
+description = "Real-time security layer protecting AI Agents from Confused Deputy attacks, malicious MCP payloads, and Indirect Prompt Injection."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"

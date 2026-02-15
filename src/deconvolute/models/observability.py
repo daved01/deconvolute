@@ -44,6 +44,7 @@ class DiscoveryEvent(BaseEvent):
 
     Attributes:
         type: Event type discriminator (always "discovery").
+        client_session_id: The ID of the session.
         tools_found_count: Total number of tools returned by the server.
         tools_allowed_count: Number of tools permitted by the policy.
         tools_allowed: List of ToolData of allowed tools.
@@ -52,6 +53,8 @@ class DiscoveryEvent(BaseEvent):
     """
 
     type: Literal["discovery"] = "discovery"
+
+    client_session_id: str | None = None
 
     tools_found_count: int
     tools_allowed_count: int
@@ -70,6 +73,7 @@ class AccessEvent(BaseEvent):
 
     Attributes:
         type: Event type discriminator (always "access").
+        client_session_id: The ID of the session.
         tool_name: The name of the tool being called.
         status: The security verdict (SAFE, UNSAFE, WARNING).
         reason: A machine-readable reason string (e.g. "policy_allow",
@@ -82,6 +86,8 @@ class AccessEvent(BaseEvent):
     """
 
     type: Literal["access"] = "access"
+
+    client_session_id: str | None = None
 
     tool_name: str
     status: SecurityStatus

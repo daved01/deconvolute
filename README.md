@@ -95,6 +95,7 @@ safe_session = mcp_guard(
     original_session,
     audit_log="./logs/security_events.jsonl"
 )
+```
 
 ## Defense in Depth
 

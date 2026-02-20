@@ -17,7 +17,7 @@ from deconvolute.utils.logger import get_logger
 logger = get_logger()
 
 
-DEFAULT_RULES_DIR = Path(__file__).parent / "rules"
+DEFAULT_RULES_DIR = Path(__file__).resolve().parents[6] / "shared" / "rules"
 
 
 class SignatureScanner(BaseScanner):

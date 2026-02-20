@@ -89,7 +89,6 @@ jobs:
       - name: Build Package
         run: |
           cd python
-          cp ../README.md README.md
           uv build
 
       - name: Publish to PyPI

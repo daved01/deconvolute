@@ -24,16 +24,16 @@ jobs:
           enable-cache: true
 
       - name: Install Python 3.11
-        run: uv python install 3.11
+        run: cd python && uv python install 3.11
 
       - name: Install Lint Deps
-        run: uv sync --only-group dev
+        run: cd python && uv sync --only-group dev
 
       - name: Check Format
-        run: uv run ruff format --check .
+        run: cd python && uv run ruff format --check .
 
       - name: Lint
-        run: uv run ruff check .
+        run: cd python && uv run ruff check .
 
   validation:
     name: Types & Tests
@@ -59,13 +59,13 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install All Deps
-        run: uv sync --all-extras
+        run: cd python && uv sync --all-extras
 
       - name: Type Check (Mypy)
-        run: uv run mypy .
+        run: cd python && uv run mypy .
 
       - name: Run Tests
-        run: uv run pytest --cov=deconvolute --cov-report=xml
+        run: cd python && uv run pytest --cov=deconvolute --cov-report=xml
 
   summary:
     name: CI Summary

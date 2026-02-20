@@ -14,7 +14,11 @@ When your AI agent calls tools on an MCP server, how do you know that `read_file
 
 ## Quick Start
 
-Install the SDK:
+The repository contains implementations for different languages:
+- `python/`: The Python SDK (Installation: `pip install deconvolute`)
+- `typescript/`: The TypeScript SDK (Coming Soon)
+
+Install the Python SDK:
 
 ```bash
 pip install deconvolute

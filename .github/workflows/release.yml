@@ -55,9 +55,9 @@ jobs:
       - name: Verify __init__.py matches
         run: |
           # Extract version from file
-          FILE_VERSION=$(grep '__version__' src/deconvolute/__init__.py | cut -d'"' -f2)
+          FILE_VERSION=$(grep '__version__' python/src/deconvolute/__init__.py | cut -d'"' -f2)
           if [ "$FILE_VERSION" != "${{ inputs.version }}" ]; then
-            echo "ERROR: src/deconvolute/__init__.py says $FILE_VERSION but you requested ${{ inputs.version }}"
+            echo "ERROR: python/src/deconvolute/__init__.py says $FILE_VERSION but you requested ${{ inputs.version }}"
             exit 1
           fi
 
@@ -72,7 +72,7 @@ jobs:
           # 2. Check if the version string is present in the file
           if ! grep -Fq "${{ inputs.version }}" CHANGELOG.md; then
             echo "ERROR: CHANGELOG.md does not contain version ${{ inputs.version }}."
-            echo "Please run locally: uv run git-cliff --tag ${{ inputs.version }} --output CHANGELOG.md"
+            echo "Please run locally: cd python && uv run git-cliff -c ../cliff.toml -r .. --tag ${{ inputs.version }} --output ../CHANGELOG.md"
             echo "Then commit and push the changes."
             exit 1
           fi
@@ -80,17 +80,22 @@ jobs:
 
       - name: Run Tests & Linters
         run: |
+          cd python
           uv sync --all-extras --dev
           uv run ruff check .
           uv run mypy .
           uv run pytest
 
       - name: Build Package
-        run: uv build
+        run: |
+          cd python
+          cp ../README.md README.md
+          uv build
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
+          packages-dir: python/dist
           verbose: true
 
       - name: Create and Push Tag

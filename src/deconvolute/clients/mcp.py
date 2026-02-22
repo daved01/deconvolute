@@ -68,6 +68,15 @@ class MCPProxy:
         self._integrity_mode = integrity_mode
         self._client_session_id = str(uuid.uuid4())
 
+    async def initialize(self, *args: Any, **kwargs: Any) -> Any:
+        """
+        Intercepts session initialization to dynamically extract the server's identity.
+        """
+        result = await self._session.initialize(*args, **kwargs)
+        if hasattr(result, "serverInfo") and hasattr(result.serverInfo, "name"):
+            self._firewall.set_server(result.serverInfo.name)
+        return result
+
     async def __aenter__(self) -> "MCPProxy":
         """
         Allow using the guarded session directly in 'async with'.

@@ -60,7 +60,9 @@ def policy():
 
 @pytest.fixture
 def firewall(policy):
-    return MCPFirewall(policy)
+    fw = MCPFirewall(policy)
+    fw.set_server("local")
+    return fw
 
 
 def test_compile_rules_regex_generation(firewall):
@@ -138,6 +140,7 @@ def test_evaluate_rules_with_condition(firewall):
         },
     )
     fw = MCPFirewall(policy)
+    fw.set_server("local")
 
     # safe=True -> matches 2nd rule -> ALLOW
     assert fw._evaluate_rules("cond.tool", {"safe": True}) == PolicyAction.ALLOW
@@ -169,6 +172,7 @@ def test_evaluate_rules_condition_error(firewall, caplog):
         },
     )
     fw = MCPFirewall(policy)
+    fw.set_server("local")
 
     # Should log warning and treat as False (skip rule)
     with caplog.at_level("WARNING"):

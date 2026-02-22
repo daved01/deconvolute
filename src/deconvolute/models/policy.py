@@ -15,12 +15,12 @@ class PolicyAction(str, Enum):
     WARN = "warn"  # Permit but log a warning
 
 
-class PolicyRule(BaseModel):
+class ToolRule(BaseModel):
     """
     A single security rule defining how to handle specific tools.
     """
 
-    tool: str = Field(..., description="Tool name pattern (e.g. 'mcp.filesystem.*')")
+    name: str = Field(..., description="Tool name pattern (e.g. 'read_file')")
 
     action: PolicyAction = Field(..., description="The enforcement action to take.")
 
@@ -29,6 +29,20 @@ class PolicyRule(BaseModel):
     )
 
     reason: str | None = Field(None, description="Human-readable explanation for logs.")
+
+    model_config = ConfigDict(frozen=True)
+
+
+class ServerPolicy(BaseModel):
+    """
+    Policies applied to tools exposed by a specific server.
+    """
+
+    description: str | None = Field(
+        None, description="Optional description of the server"
+    )
+
+    tools: list[ToolRule] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 
@@ -44,7 +58,7 @@ class SecurityPolicy(BaseModel):
         default=PolicyAction.BLOCK, description="Fallback action if no rule matches."
     )
 
-    rules: list[PolicyRule] = Field(default_factory=list)
+    servers: dict[str, ServerPolicy] = Field(default_factory=dict)
 
     model_config = ConfigDict(frozen=True)
 

@@ -13,15 +13,19 @@ class TestPolicyLoader:
     def test_load_valid_policy(self):
         """Test loading a valid policy file."""
         policy_data = {
-            "version": "1.0",
+            "version": "2.0",
             "default_action": "block",
-            "rules": [
-                {
-                    "tool": "mcp.filesystem.*",
-                    "action": "allow",
-                    "condition": "args.path.startswith('/tmp')",
+            "servers": {
+                "test_server": {
+                    "tools": [
+                        {
+                            "name": "mcp.filesystem.*",
+                            "action": "allow",
+                            "condition": "args.path.startswith('/tmp')",
+                        }
+                    ]
                 }
-            ],
+            },
         }
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
@@ -31,11 +35,13 @@ class TestPolicyLoader:
         try:
             policy = PolicyLoader.load(policy_path)
             assert isinstance(policy, SecurityPolicy)
-            assert policy.version == "1.0"
+            assert policy.version == "2.0"
             assert policy.default_action == PolicyAction.BLOCK
-            assert len(policy.rules) == 1
-            assert policy.rules[0].tool == "mcp.filesystem.*"
-            assert policy.rules[0].action == PolicyAction.ALLOW
+            assert "test_server" in policy.servers
+            tools = policy.servers["test_server"].tools
+            assert len(tools) == 1
+            assert tools[0].name == "mcp.filesystem.*"
+            assert tools[0].action == PolicyAction.ALLOW
         finally:
             os.remove(policy_path)
 
@@ -59,9 +65,9 @@ class TestPolicyLoader:
     def test_load_invalid_schema(self):
         """Test loading a policy that doesn't match the schema."""
         policy_data = {
-            "version": "1.0",
-            # 'rules' should be a list, but we provide a string
-            "rules": "this is not a list",
+            "version": "2.0",
+            # 'servers' should be a dict, but we provide a string
+            "servers": "this is not a dict",
         }
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:

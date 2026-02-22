@@ -36,26 +36,28 @@ class MCPFirewall:
         """
         self.policy = policy
         self.registry = MCPSessionRegistry()
-        self._compiled_rules: list[CompiledRule] = self._compile_rules(policy.rules)
+        self._compiled_rules: list[CompiledRule] = self._compile_rules(policy.servers)
 
-    def _compile_rules(self, rules: list[Any]) -> list[CompiledRule]:
+    def _compile_rules(self, servers: dict[str, Any]) -> list[CompiledRule]:
         """
-        Transform raw policy rules into optimized executable rules.
+        Transform raw policy rules into optimized executable rules by aggregating
+        tool rules from all servers.
         """
         compiled = []
-        for rule in rules:
-            # Convert wildcard pattern to regex (e.g. "fs_*" -> "^fs_.*$")
-            regex_str = "^" + re.escape(rule.tool).replace("\\*", ".*") + "$"
-            pattern = re.compile(regex_str, re.IGNORECASE)
+        for _server_name, server_policy in servers.items():
+            for rule in server_policy.tools:
+                # Convert wildcard pattern to regex (e.g. "fs_*" -> "^fs_.*$")
+                regex_str = "^" + re.escape(rule.name).replace("\\*", ".*") + "$"
+                pattern = re.compile(regex_str, re.IGNORECASE)
 
-            compiled.append(
-                CompiledRule(
-                    tool_pattern=pattern,
-                    action=rule.action,
-                    condition_code=rule.condition,
-                    original_rule_str=rule.tool,
+                compiled.append(
+                    CompiledRule(
+                        tool_pattern=pattern,
+                        action=rule.action,
+                        condition_code=rule.condition,
+                        original_rule_str=rule.name,
+                    )
                 )
-            )
         return compiled
 
     def _dict_to_namespace(self, data: Any) -> Any:

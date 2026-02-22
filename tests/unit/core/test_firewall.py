@@ -1,7 +1,12 @@
 import pytest
 
 from deconvolute.core.firewall import MCPFirewall
-from deconvolute.models.policy import PolicyAction, PolicyRule, SecurityPolicy
+from deconvolute.models.policy import (
+    PolicyAction,
+    SecurityPolicy,
+    ServerPolicy,
+    ToolRule,
+)
 from deconvolute.models.security import SecurityStatus
 
 
@@ -9,42 +14,47 @@ from deconvolute.models.security import SecurityStatus
 def policy():
     # Define a policy with varied rules
     return SecurityPolicy(
-        version="1.0",
+        version="2.0",
         default_action=PolicyAction.BLOCK,
-        rules=[
-            # 1. Catch-all
-            PolicyRule(
-                tool="*", action=PolicyAction.ALLOW, condition=None, reason=None
-            ),
-            # 2. Prefix wildcard
-            PolicyRule(
-                tool="mcp.filesystem.*",
-                action=PolicyAction.WARN,
-                condition=None,
-                reason=None,
-            ),
-            # 3. Exact match
-            PolicyRule(
-                tool="mcp.filesystem.read_file",
-                action=PolicyAction.BLOCK,
-                condition=None,
-                reason=None,
-            ),
-            # 4. Infix wildcard
-            PolicyRule(
-                tool="special.*.tool",
-                action=PolicyAction.ALLOW,
-                condition=None,
-                reason=None,
-            ),
-            # 5. Condition-based rule
-            PolicyRule(
-                tool="conditional.tool",
-                action=PolicyAction.ALLOW,
-                condition="args.force is True",
-                reason=None,
-            ),
-        ],
+        servers={
+            "local": ServerPolicy(
+                tools=[
+                    # 1. Catch-all
+                    ToolRule(
+                        name="*", action=PolicyAction.ALLOW, condition=None, reason=None
+                    ),
+                    # 2. Prefix wildcard
+                    ToolRule(
+                        name="mcp.filesystem.*",
+                        action=PolicyAction.WARN,
+                        condition=None,
+                        reason=None,
+                    ),
+                    # 3. Exact match
+                    ToolRule(
+                        name="mcp.filesystem.read_file",
+                        action=PolicyAction.BLOCK,
+                        condition=None,
+                        reason=None,
+                    ),
+                    # 4. Infix wildcard
+                    ToolRule(
+                        name="special.*.tool",
+                        action=PolicyAction.ALLOW,
+                        condition=None,
+                        reason=None,
+                    ),
+                    # 5. Condition-based rule
+                    ToolRule(
+                        name="conditional.tool",
+                        action=PolicyAction.ALLOW,
+                        condition="args.force is True",
+                        reason=None,
+                    ),
+                ],
+                description="This is a policy.",
+            )
+        },
     )
 
 
@@ -105,19 +115,27 @@ def test_evaluate_rules_with_condition(firewall):
 
     # Case 2: args.force is False -> Condition fails
     policy = SecurityPolicy(
-        version="1.0",
+        version="2.0",
         default_action=PolicyAction.BLOCK,
-        rules=[
-            PolicyRule(
-                tool="cond.tool", action=PolicyAction.BLOCK, condition=None, reason=None
-            ),
-            PolicyRule(
-                tool="cond.tool",
-                action=PolicyAction.ALLOW,
-                condition="args.safe is True",
-                reason=None,
-            ),
-        ],
+        servers={
+            "local": ServerPolicy(
+                tools=[
+                    ToolRule(
+                        name="cond.tool",
+                        action=PolicyAction.BLOCK,
+                        condition=None,
+                        reason=None,
+                    ),
+                    ToolRule(
+                        name="cond.tool",
+                        action=PolicyAction.ALLOW,
+                        condition="args.safe is True",
+                        reason=None,
+                    ),
+                ],
+                description="This is a policy.",
+            )
+        },
     )
     fw = MCPFirewall(policy)
 
@@ -134,16 +152,21 @@ def test_evaluate_rules_with_condition(firewall):
 def test_evaluate_rules_condition_error(firewall, caplog):
     """Test that condition runtime errors are handled gracefully."""
     policy = SecurityPolicy(
-        version="1.0",
+        version="2.0",
         default_action=PolicyAction.BLOCK,
-        rules=[
-            PolicyRule(
-                tool="bad.tool",
-                action=PolicyAction.ALLOW,
-                condition="args.missing_attr",
-                reason=None,
-            ),
-        ],
+        servers={
+            "local": ServerPolicy(
+                tools=[
+                    ToolRule(
+                        name="bad.tool",
+                        action=PolicyAction.ALLOW,
+                        condition="args.missing_attr",
+                        reason=None,
+                    ),
+                ],
+                description="This is a policy.",
+            )
+        },
     )
     fw = MCPFirewall(policy)
 

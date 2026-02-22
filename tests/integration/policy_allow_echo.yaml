@@ -1,7 +1,9 @@
-version: "1.0"
+version: "2.0"
 default_action: "block"
-rules:
-  - tool: "echo"
-    action: "allow"
-  - tool: "add"
-    action: "allow"
+servers:
+  live-test-server:
+    tools:
+      - name: "echo"
+        action: "allow"
+      - name: "add"
+        action: "allow"

@@ -152,6 +152,50 @@ def test_evaluate_rules_with_condition(firewall):
     assert fw._evaluate_rules("cond.tool", None) == PolicyAction.BLOCK
 
 
+def test_evaluate_rules_discovery_mode(firewall):
+    """Test that discovery_mode behaves correctly during rule evaluation."""
+    policy = SecurityPolicy(
+        version="2.0",
+        default_action=PolicyAction.BLOCK,
+        servers={
+            "local": ServerPolicy(
+                tools=[
+                    ToolRule(
+                        name="cond.tool",
+                        action=PolicyAction.ALLOW,
+                        condition="args.safe is True",
+                        reason=None,
+                    ),
+                ],
+                description="This is a policy.",
+            )
+        },
+    )
+    fw = MCPFirewall(policy)
+    fw.set_server("local")
+
+    # Regular evaluation without args -> default action BLOCK
+    assert (
+        fw._evaluate_rules("cond.tool", None, discovery_mode=False)
+        == PolicyAction.BLOCK
+    )
+
+    # Discovery mode without args -> benefit of doubt -> ALLOW
+    assert (
+        fw._evaluate_rules("cond.tool", None, discovery_mode=True) == PolicyAction.ALLOW
+    )
+
+    # Discovery mode WITH args -> strict evaluation takes precedence
+    assert (
+        fw._evaluate_rules("cond.tool", {"safe": False}, discovery_mode=True)
+        == PolicyAction.BLOCK
+    )
+    assert (
+        fw._evaluate_rules("cond.tool", {"safe": True}, discovery_mode=True)
+        == PolicyAction.ALLOW
+    )
+
+
 def test_evaluate_rules_condition_error(firewall, caplog):
     """Test that condition runtime errors are handled gracefully."""
     policy = SecurityPolicy(

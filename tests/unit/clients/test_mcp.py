@@ -174,3 +174,63 @@ async def test_call_tool_warning(proxy, mock_session, mock_firewall):
     )
     mock_session.call_tool.assert_called_once_with(tool_name, args)
     assert result == "success"
+
+
+def test_proxy_init_sets_server_from_server_info(mock_mcp_modules, mock_firewall):
+    from deconvolute.clients.mcp import MCPProxy
+
+    mock_session = MagicMock()
+
+    # Mock server_info (snake_case)
+    class MockInfo:
+        name = "test_server_snake"
+
+    mock_session.server_info = MockInfo()
+    if hasattr(mock_session, "serverInfo"):
+        del mock_session.serverInfo
+
+    # Init proxy
+    MCPProxy(mock_session, mock_firewall)
+
+    # Assert firewall.set_server was called with correct name
+    mock_firewall.set_server.assert_called_once_with("test_server_snake")
+
+
+def test_proxy_init_sets_server_from_serverInfo_camel_case(
+    mock_mcp_modules, mock_firewall
+):
+    from deconvolute.clients.mcp import MCPProxy
+
+    mock_session = MagicMock()
+
+    # Mock serverInfo (camelCase)
+    class MockInfo:
+        name = "test_server_camel"
+
+    mock_session.serverInfo = MockInfo()
+    if hasattr(mock_session, "server_info"):
+        del mock_session.server_info
+
+    # Init proxy
+    MCPProxy(mock_session, mock_firewall)
+
+    # Assert firewall.set_server was called with correct name
+    mock_firewall.set_server.assert_called_once_with("test_server_camel")
+
+
+def test_proxy_init_no_server_info(mock_mcp_modules, mock_firewall):
+    from deconvolute.clients.mcp import MCPProxy
+
+    mock_session = MagicMock()
+
+    # Clear both attributes
+    if hasattr(mock_session, "server_info"):
+        del mock_session.server_info
+    if hasattr(mock_session, "serverInfo"):
+        del mock_session.serverInfo
+
+    # Init proxy
+    MCPProxy(mock_session, mock_firewall)
+
+    # Assert firewall.set_server was NOT called
+    mock_firewall.set_server.assert_not_called()

@@ -67,6 +67,9 @@ class MCPProxy:
         self._firewall = firewall
         self._integrity_mode = integrity_mode
         self._client_session_id = str(uuid.uuid4())
+        info = getattr(session, "server_info", getattr(session, "serverInfo", None))
+        if info and hasattr(info, "name"):
+            self._firewall.set_server(info.name)
 
     async def initialize(self, *args: Any, **kwargs: Any) -> Any:
         """
@@ -131,7 +134,7 @@ class MCPProxy:
         # Observability Hook
         backend = get_backend()
         if backend:
-            # Helper to build ToolData from our internal interface
+            # Helper to build ToolData from internal interface
             def build_tool_data(tool_def: ToolInterface, is_allowed: bool) -> ToolData:
                 tool_hash = None
                 if is_allowed:

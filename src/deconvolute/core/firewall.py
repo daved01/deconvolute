@@ -4,6 +4,7 @@ from typing import Any
 
 from deconvolute.core.mcp_session import MCPSessionRegistry
 from deconvolute.core.types import ToolInterface
+from deconvolute.errors import TransportSpoofingError
 from deconvolute.models.policy import (
     CompiledRule,
     PolicyAction,
@@ -13,6 +14,7 @@ from deconvolute.models.security import (
     SecurityComponent,
     SecurityResult,
     SecurityStatus,
+    TransportOrigin,
 )
 from deconvolute.utils.logger import get_logger
 
@@ -39,12 +41,110 @@ class MCPFirewall:
         self.server_name: str | None = None
         self._compiled_rules: list[CompiledRule] = []
 
-    def set_server(self, server_name: str) -> None:
+    def set_server(
+        self, server_name: str, transport_origin: TransportOrigin | None = None
+    ) -> None:
         """
-        Dynamically configures the firewall by compiling rules for the given server.
+        Dynamically configures the firewall by compiling rules for the given server
+        and optionally validating the transport origin to prevent spoofing.
         """
         self.server_name = server_name
         self._compiled_rules = self._compile_rules(server_name)
+
+        if transport_origin:
+            self._verify_transport_origin(server_name, transport_origin)
+
+    def _verify_transport_origin(
+        self,
+        server_name: str,
+        origin: TransportOrigin,
+    ) -> None:
+        """
+        Validates that the connection's physical origin matches the policy's strict
+        requirements.
+
+        This mechanism prevents Server Identity Spoofing. When an MCP server initializes,
+        it self-reports its name. This function cross-references that self-reported name
+        against the verified transport metadata (e.g., the local executable path or the
+        remote SSE URL) defined in the security policy.
+
+        Args:
+            server_name: The self-reported name of the MCP server discovered during
+                initialization.
+            origin: The strongly typed actual physical connection parameters.
+
+        Raises:
+            TransportSpoofingError: If the actual transport origin does not match the
+                expected origin defined in the server's policy, indicating a potential
+                spoofing attempt.
+        """
+
+        server_policy = self.policy.servers.get(server_name)
+        if not server_policy:
+            return
+
+        transport_rule = server_policy.transport
+        if not transport_rule:
+            logger.warning(
+                f"Firewall: No strict transport origin defined for '{server_name}'. "
+                "Relying on self-attested name only."
+            )
+            return
+
+        # Guard against transport mismatch (e.g. policy says stdio, but is sse)
+        if transport_rule.type != origin.type:
+            logger.error(
+                f"Firewall: Transport type spoofing detected for '{server_name}'. "
+                f"Policy requires '{transport_rule.type}', but connection used "
+                f"'{origin.type}'."
+            )
+            raise TransportSpoofingError(
+                f"Origin validation failed. Transport type mismatch for {server_name}."
+            )
+
+        if origin.type == "stdio":
+            # Both are now strongly typed as stdio variants
+            expected_stdio = transport_rule
+
+            if expected_stdio.command and expected_stdio.command != origin.command:
+                logger.error(
+                    f"Firewall: Spoofing detected for '{server_name}'. "
+                    f"Expected command '{expected_stdio.command}', got "
+                    f"'{origin.command}'."
+                )
+                raise TransportSpoofingError(
+                    f"Origin validation failed. Command mismatch for {server_name}."
+                )
+
+            if expected_stdio.args is not None and expected_stdio.args != origin.args:
+                logger.error(
+                    f"Firewall: Spoofing detected for '{server_name}'. "
+                    f"Expected args {expected_stdio.args}, got {origin.args}."
+                )
+                raise TransportSpoofingError(
+                    f"Origin validation failed. Arguments mismatch for {server_name}."
+                )
+
+            logger.debug(
+                f"Firewall: Transport origin verified for '{server_name}' (stdio)."
+            )
+
+        elif origin.type == "sse":
+            expected_sse = transport_rule
+
+            if expected_sse.url and not origin.url.startswith(expected_sse.url):
+                logger.error(
+                    f"Firewall: Spoofing detected for '{server_name}'. "
+                    f"Expected URL starting with '{expected_sse.url}', got "
+                    f"'{origin.url}'."
+                )
+                raise TransportSpoofingError(
+                    f"Origin validation failed. URL mismatch for {server_name}."
+                )
+
+            logger.debug(
+                f"Firewall: Transport origin verified for '{server_name}' (sse)."
+            )
 
     def _compile_rules(self, server_name: str) -> list[CompiledRule]:
         """

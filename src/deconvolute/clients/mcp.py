@@ -1,4 +1,6 @@
 import uuid
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Any
 
 from deconvolute.models.observability import ToolData
@@ -33,6 +35,9 @@ from deconvolute.models.security import (
     SecurityComponent,
     SecurityResult,
     SecurityStatus,
+    SSEOrigin,
+    StdioOrigin,
+    TransportOrigin,
 )
 from deconvolute.observability import get_backend
 from deconvolute.utils.logger import get_logger
@@ -57,6 +62,7 @@ class MCPProxy:
         session: ClientSession,
         firewall: MCPFirewall,
         integrity_mode: IntegrityLevel = "snapshot",
+        transport_origin: TransportOrigin | None = None,
     ) -> None:
         """
         Args:
@@ -67,10 +73,11 @@ class MCPProxy:
         self._session = session
         self._firewall = firewall
         self._integrity_mode = integrity_mode
+        self._transport_origin = transport_origin
         self._client_session_id = str(uuid.uuid4())
         info = getattr(session, "server_info", getattr(session, "serverInfo", None))
         if info and hasattr(info, "name"):
-            self._firewall.set_server(info.name)
+            self._firewall.set_server(info.name, self._transport_origin)
 
     async def initialize(self, *args: Any, **kwargs: Any) -> Any:
         """
@@ -82,7 +89,7 @@ class MCPProxy:
         info = getattr(result, "server_info", getattr(result, "serverInfo", None))
 
         if info and hasattr(info, "name"):
-            self._firewall.set_server(info.name)
+            self._firewall.set_server(info.name, self._transport_origin)
         return result
 
     async def __aenter__(self) -> "MCPProxy":
@@ -401,3 +408,59 @@ class MCPProxy:
 
         # Allow: Execute the real tool call
         return await self._session.call_tool(name, arguments, *args, **kwargs)
+
+
+@asynccontextmanager
+async def secure_stdio_session_impl(
+    server_parameters: Any,
+    policy_path: str,
+    integrity: IntegrityLevel = "snapshot",
+    audit_log: str | None = None,
+) -> AsyncIterator[MCPProxy]:
+    """Implementation for the secure stdio transport wrapper."""
+    from mcp.client.stdio import stdio_client
+
+    from deconvolute.core.api import mcp_guard
+
+    origin = StdioOrigin(
+        type="stdio",
+        command=server_parameters.command,
+        args=server_parameters.args or [],
+    )
+
+    async with stdio_client(server_parameters) as (read, write):
+        async with ClientSession(read, write) as session:
+            guarded_session = mcp_guard(
+                session,
+                policy_path=policy_path,
+                integrity=integrity,
+                audit_log=audit_log,
+                transport_origin=origin,
+            )
+            yield guarded_session
+
+
+@asynccontextmanager
+async def secure_sse_session_impl(
+    url: str,
+    policy_path: str,
+    integrity: IntegrityLevel = "snapshot",
+    audit_log: str | None = None,
+) -> AsyncIterator[MCPProxy]:
+    """Implementation for the secure sse transport wrapper."""
+    from mcp.client.sse import sse_client
+
+    from deconvolute.core.api import mcp_guard
+
+    origin = SSEOrigin(type="sse", url=url)
+
+    async with sse_client(url) as (read, write):
+        async with ClientSession(read, write) as session:
+            guarded_session = mcp_guard(
+                session,
+                policy_path=policy_path,
+                integrity=integrity,
+                audit_log=audit_log,
+                transport_origin=origin,
+            )
+            yield guarded_session

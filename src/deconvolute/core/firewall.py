@@ -104,16 +104,17 @@ class MCPFirewall:
         discovery_mode: bool = False,
     ) -> PolicyAction:
         """
-        Fast runtime evaluation using pre-compiled rules.
+        Runtime evaluation using First Match Wins logic on pre-compiled rules.
+
+        Rules are evaluated in the order they appear in the policy.
+        The first rule that matches the tool name (and condition) is returned.
+        If no rules match, the policy's default_action is applied.
 
         Args:
             tool_name: Name of the tool.
             args: Arguments for the tool call (None during discovery).
             discovery_mode: If True, allows conditional rules to pass without args.
         """
-        # Start with the default action
-        final_action = self.policy.default_action
-
         for rule in self._compiled_rules:
             if rule.tool_pattern.match(tool_name):
                 should_apply = True
@@ -131,9 +132,10 @@ class MCPFirewall:
                         should_apply = False
 
                 if should_apply:
-                    final_action = rule.action
+                    # First Match Wins. We exit immediately once a rule matches.
+                    return rule.action
 
-        return final_action
+        return self.policy.default_action
 
     def check_tool_list(self, tools: list[ToolInterface]) -> list[ToolInterface]:
         """

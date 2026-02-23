@@ -67,20 +67,23 @@ This architecture prevents:
 
 ### Policy-as-Code
 
-Your `deconvolute_policy.yaml` enforces a "Default Deny" security model:
+Deconvolute uses a **First Match Wins** evaluation model. Rules are processed from top to bottom; the first rule that matches the tool name (and its condition) determines the action.
 
 ```yaml
-version: "1.0"
-
+version: "2.0"
 default_action: "block"
 
-rules:
-  # Add the specific tools your agent needs here.
-  # Any tool not listed below is automatically blocked.
-  - tool: "read_file"
-    action: "allow"
-  - tool: "search_documents"
-    action: "allow"
+servers:
+  filesystem:
+    tools:
+      # 1. Specific restriction (Checked First)
+      - name: "read_file"
+        action: "allow"
+        condition: "args.path.startswith('/tmp/')"
+      
+      # 2. General block (Checked Second)
+      - name: "*"
+        action: "block"
 ```
 
 The firewall loads this policy at runtime. If a blocked tool is called, the SDK blocks the request locally without contacting the server.

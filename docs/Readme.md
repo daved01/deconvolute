@@ -210,36 +210,28 @@ for tool_name, snapshot in registry.all_tools.items():
 
 ### Policy Configuration (`deconvolute_policy.yaml`)
 
-Security rules are defined in a local YAML file using a **Default Deny** approach. If a tool is not explicitly listed, it is automatically blocked.
-
-```yaml
-version: "1.0"
-default_action: "block"
-
-rules:
-  # Allow specific tools
-  - tool: "read_file"
-    action: "allow"
-
-  - tool: "list_directory"
-    action: "allow"
-
-  # Pattern matching (Regex support)
-  - tool: "fs_.*"
-    action: "allow"
-    
-  # Conditional Logic (Python expressions)
-  - tool: "delete_file"
-    action: "allow"
-    condition: "args.path.startswith('/tmp/')"
-```
+Security rules are enforced using a **First Match Wins** strategy. This makes it easy to create "safe exceptions" within your policy.
 
 **Policy Semantics**:
 - Rules are evaluated in order.
 - The `tool` field supports regex patterns (automatically anchored).
 - `condition` allows fine-grained control over arguments.
 
-Future versions will support more granular policies, such as parameter constraints and conditional allowlists based on session context.
+#### Is an explicit 'block' redundant?
+If your `default_action` is `block`, then a rule like `- name: "secret_tool", action: "block"` is technically redundant. However, explicit blocks are highly recommended for:
+1. **Clarity**: It documents *why* a specific tool is forbidden.
+2. **Safety**: It protects you if someone later changes the `default_action` to `allow`.
+3. **Overrides**: It allows you to block a specific tool on a server where you have a general `name: "*", action: "allow"` rule at the bottom.
+
+#### Example: The "Override" Pattern
+```yaml
+tools:
+  - name: "unsafe_tool"
+    action: "block"   # This "wins" because it is at the top
+  - name: "*"
+    action: "allow"   # This allows everything ELSE
+```
+
 
 ### Performance Characteristics
 

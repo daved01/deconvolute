@@ -19,22 +19,25 @@ def policy():
         servers={
             "local": ServerPolicy(
                 tools=[
-                    # 1. Catch-all
+                    # 1. Exact match (Specific block)
                     ToolRule(
-                        name="*", action=PolicyAction.ALLOW, condition=None, reason=None
+                        name="mcp.filesystem.read_file",
+                        action=PolicyAction.BLOCK,
+                        condition=None,
+                        reason=None,
                     ),
-                    # 2. Prefix wildcard
+                    # 2. Prefix wildcard (Category warn)
                     ToolRule(
                         name="mcp.filesystem.*",
                         action=PolicyAction.WARN,
                         condition=None,
                         reason=None,
                     ),
-                    # 3. Exact match
+                    # 3. Condition-based rule
                     ToolRule(
-                        name="mcp.filesystem.read_file",
-                        action=PolicyAction.BLOCK,
-                        condition=None,
+                        name="conditional.tool",
+                        action=PolicyAction.ALLOW,
+                        condition="args.force is True",
                         reason=None,
                     ),
                     # 4. Infix wildcard
@@ -44,12 +47,9 @@ def policy():
                         condition=None,
                         reason=None,
                     ),
-                    # 5. Condition-based rule
+                    # 5. Catch-all (Broad permission)
                     ToolRule(
-                        name="conditional.tool",
-                        action=PolicyAction.ALLOW,
-                        condition="args.force is True",
-                        reason=None,
+                        name="*", action=PolicyAction.ALLOW, condition=None, reason=None
                     ),
                 ],
                 description="This is a policy.",
@@ -68,9 +68,9 @@ def firewall(policy):
 def test_compile_rules_regex_generation(firewall):
     """Test that wildcards are correctly converted to regex."""
     compiled = firewall._compiled_rules
-    # rule 0: "*" -> "^.*$"
-    assert compiled[0].tool_pattern.match("anything")
-    assert compiled[0].tool_pattern.match("mcp.filesystem.read_file")
+    # rule 4: "*" -> "^.*$"
+    assert compiled[4].tool_pattern.match("anything")
+    assert compiled[4].tool_pattern.match("mcp.filesystem.read_file")
 
     # rule 1: "mcp.filesystem.*" -> "^mcp\\.filesystem\\..*$"
     assert compiled[1].tool_pattern.match("mcp.filesystem.list_files")
@@ -85,23 +85,23 @@ def test_compile_rules_regex_generation(firewall):
 def test_compile_rules_condition(firewall):
     """Test that conditions are compiled into code objects."""
     compiled = firewall._compiled_rules
-    # Rule 4 (conditional.tool) has a condition
-    assert compiled[4].condition_code is not None
-    # Rule 0 has no condition
-    assert compiled[0].condition_code is None
+    # Rule 2 (conditional.tool) has a condition
+    assert compiled[2].condition_code is not None
+    # Rule 4 has no condition
+    assert compiled[4].condition_code is None
 
 
 def test_evaluate_rules_precedence(firewall):
-    """Test 'Last Match Wins' logic."""
-    # "mcp.filesystem.read_file" matches Rule 0 (ALLOW), Rule 1 (WARN), Rule 2 (BLOCK).
-    # Last match is Rule 2.
+    """Test 'First Match Wins' logic."""
+    # "mcp.filesystem.read_file" matches Rule 0 (BLOCK), Rule 1 (WARN), Rule 4 (ALLOW).
+    # First match is Rule 0.
     assert firewall._evaluate_rules("mcp.filesystem.read_file") == PolicyAction.BLOCK
 
-    # "mcp.filesystem.list_files" matches Rule 0 (ALLOW), Rule 1 (WARN).
-    # Last match is Rule 1.
+    # "mcp.filesystem.list_files" matches Rule 1 (WARN), Rule 4 (ALLOW).
+    # First match is Rule 1.
     assert firewall._evaluate_rules("mcp.filesystem.list_files") == PolicyAction.WARN
 
-    # "random.tool" matches Rule 0 (ALLOW) only.
+    # "random.tool" matches Rule 4 (ALLOW) only.
     assert firewall._evaluate_rules("random.tool") == PolicyAction.ALLOW
 
 
@@ -124,14 +124,14 @@ def test_evaluate_rules_with_condition(firewall):
                 tools=[
                     ToolRule(
                         name="cond.tool",
-                        action=PolicyAction.BLOCK,
-                        condition=None,
+                        action=PolicyAction.ALLOW,
+                        condition="args.safe is True",
                         reason=None,
                     ),
                     ToolRule(
                         name="cond.tool",
-                        action=PolicyAction.ALLOW,
-                        condition="args.safe is True",
+                        action=PolicyAction.BLOCK,
+                        condition=None,
                         reason=None,
                     ),
                 ],
@@ -142,13 +142,13 @@ def test_evaluate_rules_with_condition(firewall):
     fw = MCPFirewall(policy)
     fw.set_server("local")
 
-    # safe=True -> matches 2nd rule -> ALLOW
+    # safe=True -> matches 1st rule -> ALLOW
     assert fw._evaluate_rules("cond.tool", {"safe": True}) == PolicyAction.ALLOW
 
-    # safe=False -> 2nd rule condition fails -> matches 1st rule -> BLOCK
+    # safe=False -> 1st rule condition fails -> matches 2nd rule -> BLOCK
     assert fw._evaluate_rules("cond.tool", {"safe": False}) == PolicyAction.BLOCK
 
-    # No args -> 2nd rule condition skipped (needs args) -> matches 1st rule -> BLOCK
+    # No args -> 1st rule condition skipped (needs args) -> matches 2nd rule -> BLOCK
     assert fw._evaluate_rules("cond.tool", None) == PolicyAction.BLOCK
 
 
@@ -194,6 +194,35 @@ def test_evaluate_rules_discovery_mode(firewall):
         fw._evaluate_rules("cond.tool", {"safe": True}, discovery_mode=True)
         == PolicyAction.ALLOW
     )
+
+
+def test_evaluate_rules_default_action_fallback():
+    """Test that default_action is applied when no rules match."""
+    policy = SecurityPolicy(
+        version="2.0",
+        default_action=PolicyAction.WARN,
+        servers={
+            "local": ServerPolicy(
+                tools=[
+                    ToolRule(
+                        name="mcp.filesystem.read_file",
+                        action=PolicyAction.BLOCK,
+                        condition=None,
+                        reason=None,
+                    ),
+                ],
+                description="Test fallback policy.",
+            )
+        },
+    )
+    fw = MCPFirewall(policy)
+    fw.set_server("local")
+
+    # matches rule -> BLOCK
+    assert fw._evaluate_rules("mcp.filesystem.read_file") == PolicyAction.BLOCK
+
+    # does not match rule -> default action -> WARN
+    assert fw._evaluate_rules("mcp.other.tool") == PolicyAction.WARN
 
 
 def test_evaluate_rules_condition_error(firewall, caplog):

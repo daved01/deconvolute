@@ -73,8 +73,8 @@ class MCPProxy:
         Intercepts session initialization to dynamically extract the server's identity.
         """
         result = await self._session.initialize(*args, **kwargs)
-        if hasattr(result, "serverInfo") and hasattr(result.serverInfo, "name"):
-            self._firewall.set_server(result.serverInfo.name)
+        if hasattr(result, "server_info") and hasattr(result.server_info, "name"):
+            self._firewall.set_server(result.server_info.name)
         return result
 
     async def __aenter__(self) -> "MCPProxy":
@@ -95,18 +95,13 @@ class MCPProxy:
 
     def _normalize_tool(self, tool: types.Tool | Any) -> ToolInterface:
         """
-        Explicitly maps the MCP library type to our internal ToolInterface.
-        This isolates us from Pydantic serialization changes (aliases, versions).
+        Explicitly maps the MCP library type to the internal ToolInterface.
+        This isolates from Pydantic serialization changes (aliases, versions).
         """
-        # We try to access attributes directly.
-        # The MCP library likely exposes 'inputSchema' via alias or 'input_schema'.
-        # We check both to be robust.
-        schema = getattr(tool, "inputSchema", getattr(tool, "input_schema", {}))
-
         return {
             "name": tool.name,
             "description": tool.description,
-            "input_schema": schema,
+            "input_schema": tool.input_schema,
         }
 
     async def list_tools(self, *args: Any, **kwargs: Any) -> types.ListToolsResult:
@@ -248,7 +243,7 @@ class MCPProxy:
                                 "no longer advertised by the server.",
                             )
                         ],
-                        isError=True,
+                        is_error=True,
                     )
             except Exception as e:
                 try:
@@ -264,7 +259,7 @@ class MCPProxy:
                                 ),
                             )
                         ],
-                        isError=True,
+                        is_error=True,
                     )
                 finally:
                     # Log the event for the system error
@@ -283,11 +278,9 @@ class MCPProxy:
                         await backend.log_access(event)
 
         # Security Check
-        # If we didn't already fail the strict check above...
-        if "sec_result" not in locals():
-            sec_result = self._firewall.check_tool_call(
-                name, safe_args, current_tool_def=current_tool_def
-            )
+        sec_result = self._firewall.check_tool_call(
+            name, safe_args, current_tool_def=current_tool_def
+        )
 
         if sec_result.status == SecurityStatus.UNSAFE and current_tool_def:
             # Rug Pull / Integrity Violation Logic
@@ -341,7 +334,7 @@ class MCPProxy:
                         text=f"🚫 Security Violation: {reason}",
                     )
                 ],
-                isError=True,
+                is_error=True,
             )
 
         # Log Warnings if present (Audit mode)

@@ -42,10 +42,10 @@ await safe_session.initialize()
 result = await safe_session.call_tool("read_file", path="/docs/report.md")
 
 # Blocked: execute_code not in policy
-# Returns a valid result with isError=True to prevent crashes
+# Returns a valid result with is_error=True to prevent crashes
 result = await safe_session.call_tool("execute_code", code="import os; os.system('rm -rf /')")
 
-if result.isError:
+if result.is_error:
     print(f"Firewall blocked: {result.content[0].text}")
 
 ```

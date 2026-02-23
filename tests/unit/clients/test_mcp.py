@@ -234,3 +234,93 @@ def test_proxy_init_no_server_info(mock_mcp_modules, mock_firewall):
 
     # Assert firewall.set_server was NOT called
     mock_firewall.set_server.assert_not_called()
+
+
+@pytest.mark.asyncio
+@patch("deconvolute.clients.mcp.get_backend")
+async def test_list_tools_discovery_event_server_details(
+    mock_get_backend, proxy, mock_session, mock_firewall
+):
+    mock_backend = MagicMock()
+    mock_backend.log_discovery = AsyncMock()
+    mock_get_backend.return_value = mock_backend
+
+    # Mock server_info (snake_case) with details
+    class MockInfo:
+        name = "test_server_name"
+        version = "1.0.0"
+        title = "Test Server"
+        description = "A server for testing"
+
+    mock_session.server_info = MockInfo()
+
+    # Setup mock tools
+    tool_a = MagicMock(name="Tool_a")
+    tool_a.name = "allowed_tool"
+    tool_a.description = "Allowed Tool Description"
+    tool_a.input_schema = {"type": "object"}
+
+    # Mock session response
+    initial_result = MagicMock()
+    initial_result.tools = [tool_a]
+
+    def side_effect_model_copy(update):
+        new_result = MagicMock()
+        new_result.tools = update["tools"]
+        return new_result
+
+    initial_result.model_copy.side_effect = side_effect_model_copy
+    mock_session.list_tools.return_value = initial_result
+
+    # Mock firewall response
+    mock_firewall.check_tool_list.return_value = [{"name": "allowed_tool"}]
+    mock_snapshot = MagicMock()
+    mock_snapshot.definition_hash = "mock_hash"
+    mock_firewall.registry.get.return_value = mock_snapshot
+
+    # Execute
+    await proxy.list_tools()
+
+    # Verify log_discovery was called
+    mock_backend.log_discovery.assert_called_once()
+    logged_event = mock_backend.log_discovery.call_args[0][0]
+
+    assert logged_event.server_info["name"] == "test_server_name"
+    assert logged_event.server_info["version"] == "1.0.0"
+    assert logged_event.server_info["title"] == "Test Server"
+    assert logged_event.server_info["description"] == "A server for testing"
+
+
+@pytest.mark.asyncio
+@patch("deconvolute.clients.mcp.get_backend")
+async def test_list_tools_discovery_event_server_details_missing_fields(
+    mock_get_backend, proxy, mock_session, mock_firewall
+):
+    mock_backend = MagicMock()
+    mock_backend.log_discovery = AsyncMock()
+    mock_get_backend.return_value = mock_backend
+
+    # Mock server_info with minimal details
+    class MockInfo:
+        pass  # missing everything
+
+    mock_session.server_info = MockInfo()
+
+    # Setup mock tools
+    initial_result = MagicMock()
+    initial_result.tools = []
+    initial_result.model_copy.return_value = initial_result
+    mock_session.list_tools.return_value = initial_result
+    mock_firewall.check_tool_list.return_value = []
+
+    # Execute
+    await proxy.list_tools()
+
+    # Verify log_discovery was called
+    mock_backend.log_discovery.assert_called_once()
+    logged_event = mock_backend.log_discovery.call_args[0][0]
+
+    assert logged_event.server_info["name"] == "unknown"
+    assert logged_event.server_info["version"] == "unknown"
+    assert "title" not in logged_event.server_info
+    assert "description" not in logged_event.server_info

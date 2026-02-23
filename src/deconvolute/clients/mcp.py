@@ -165,13 +165,30 @@ class MCPProxy:
                         build_tool_data(tool_def, is_allowed=False)
                     )
 
+            session_info = getattr(
+                self._session, "server_info", getattr(self._session, "serverInfo", None)
+            )
+            server_details = {}
+            if session_info:
+                server_details["name"] = getattr(session_info, "name", "unknown")
+                server_details["version"] = getattr(session_info, "version", "unknown")
+
+                # Extract optional human-readable metadata if the server provides it
+                title = getattr(session_info, "title", None)
+                if title:
+                    server_details["title"] = title
+
+                description = getattr(session_info, "description", None)
+                if description:
+                    server_details["description"] = description
+
             event = DiscoveryEvent(
                 client_session_id=self._client_session_id,
                 tools_found_count=len(tools_data),
                 tools_allowed_count=len(allowed_data),
                 tools_allowed=allowed_event_data,
                 tools_blocked=blocked_event_data,
-                server_info={},  # TODO: extract server info if available
+                server_info=server_details,
             )
             await backend.log_discovery(event)
 

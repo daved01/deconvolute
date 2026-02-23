@@ -19,6 +19,7 @@ except ImportError:
         CallToolResult = Any
         Tool = Any
         TextContent = Any
+        PaginatedRequestParams = Any
 
     types = DummyTypes  # type: ignore
     ClientSession = Any  # type: ignore
@@ -117,7 +118,7 @@ class MCPProxy:
 
         1. Fetches all tools from the server.
         2. Passes them through the Firewall filter.
-        3. Registers allowed tools in the SessionRegistry (Snapshotting).
+        3. Registers allowed tools in the SessionRegistry (snapshotting).
         4. Returns a ListToolsResult containing ONLY the allowed tools.
         """
         # Fetch real tools from the server
@@ -204,14 +205,45 @@ class MCPProxy:
         # Rug Pull detection
         if self._integrity_mode == "strict":
             try:
+                # Lazy exhaustive paging
                 tools_result = await self._session.list_tools()
                 # Find our tool by name
                 found_tool = next(
                     (t for t in tools_result.tools if t.name == name), None
                 )
 
+                cursor = getattr(
+                    tools_result,
+                    "next_cursor",
+                    getattr(tools_result, "nextCursor", None),
+                )
+                seen_cursors = {cursor} if cursor else set()
+
+                # If not found and more pages exist, keep paging
+                while not found_tool and cursor:
+                    page_params = types.PaginatedRequestParams(cursor=cursor)
+                    tools_result = await self._session.list_tools(params=page_params)
+
+                    found_tool = next(
+                        (t for t in tools_result.tools if t.name == name), None
+                    )
+                    # Update cursor for the next iteration
+                    next_cursor = getattr(
+                        tools_result,
+                        "next_cursor",
+                        getattr(tools_result, "nextCursor", None),
+                    )
+
+                    if next_cursor in seen_cursors:
+                        break  # Prevent infinite loop
+                    if next_cursor:
+                        seen_cursors.add(next_cursor)
+
+                    cursor = next_cursor
+
                 if found_tool:
                     current_tool_def = self._normalize_tool(found_tool)
+
                 else:
                     # Tool vanished -> Synthetic Block
                     # We create a fake SecurityResult to ensure it gets logged

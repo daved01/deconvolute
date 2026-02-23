@@ -73,8 +73,12 @@ class MCPProxy:
         Intercepts session initialization to dynamically extract the server's identity.
         """
         result = await self._session.initialize(*args, **kwargs)
-        if hasattr(result, "server_info") and hasattr(result.server_info, "name"):
-            self._firewall.set_server(result.server_info.name)
+        # The mcp SDK is in active development. We safely extract the identity
+        # handling both the newer snake_case (server_info)
+        info = getattr(result, "server_info", getattr(result, "serverInfo", None))
+
+        if info and hasattr(info, "name"):
+            self._firewall.set_server(info.name)
         return result
 
     async def __aenter__(self) -> "MCPProxy":

@@ -184,9 +184,9 @@ def test_evaluate_rules_condition_error(firewall, caplog):
 def test_check_tool_list_filtering(firewall):
     """Test that check_tool_list filters tools based on policy."""
     tools = [
-        {"name": "mcp.filesystem.read_file", "inputSchema": {}},  # BLOCK
-        {"name": "mcp.filesystem.list_files", "inputSchema": {}},  # WARN
-        {"name": "random.tool", "inputSchema": {}},  # ALLOW (Rule 0)
+        {"name": "mcp.filesystem.read_file", "input_schema": {}},  # BLOCK
+        {"name": "mcp.filesystem.list_files", "input_schema": {}},  # WARN
+        {"name": "random.tool", "input_schema": {}},  # ALLOW (Rule 0)
     ]
 
     allowed = firewall.check_tool_list(tools)
@@ -205,7 +205,7 @@ def test_check_tool_list_filtering(firewall):
 def test_check_tool_call_integrity(firewall):
     """Test that check_tool_call enforces integrity."""
     # Register a tool
-    firewall.check_tool_list([{"name": "random.tool", "inputSchema": {}}])
+    firewall.check_tool_list([{"name": "random.tool", "input_schema": {}}])
 
     # Valid call
     result = firewall.check_tool_call("random.tool", {})
@@ -222,8 +222,8 @@ def test_check_tool_call_policy_enforcement(firewall):
     # Register tools first
     firewall.check_tool_list(
         [
-            {"name": "mcp.filesystem.list_files", "inputSchema": {}},  # WARN
-            {"name": "random.tool", "inputSchema": {}},  # ALLOW
+            {"name": "mcp.filesystem.list_files", "input_schema": {}},  # WARN
+            {"name": "random.tool", "input_schema": {}},  # ALLOW
         ]
     )
 

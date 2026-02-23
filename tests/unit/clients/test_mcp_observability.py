@@ -55,12 +55,12 @@ async def test_list_tools_logs_discovery(proxy):
         tool_a = MagicMock(name="ToolA")
         tool_a.name = "allowed"
         tool_a.description = "Allowed tool"
-        tool_a.inputSchema = {}
+        tool_a.input_schema = {}
 
         tool_b = MagicMock(name="ToolB")
         tool_b.name = "blocked"
         tool_b.description = "Blocked tool"
-        tool_b.inputSchema = {}
+        tool_b.input_schema = {}
 
         # Mock session
         initial_result = MagicMock()

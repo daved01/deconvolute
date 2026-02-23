@@ -29,7 +29,7 @@ def mock_session():
     tool_a.model_dump.return_value = {
         "name": "tool_a",
         "description": "A test tool",
-        "inputSchema": {"type": "object"},
+        "input_schema": {"type": "object"},
     }
 
     session.tools_list = [tool_a]
@@ -115,7 +115,7 @@ async def test_strict_mode_blocks_vanished_tool(mock_session, mock_firewall):
     # 3. Execution
     result = await proxy.call_tool("tool_a", {})
 
-    assert result.is_error is True
+    assert result.is_error is True  # type: ignore[attr-defined]
     assert result.content[0].type == "text"
     assert "Strict Integrity Violation" in result.content[0].text
     # Firewall should NOT be called if tool is missing from server
@@ -131,5 +131,5 @@ async def test_strict_mode_handles_server_error(mock_session, mock_firewall):
 
     result = await proxy.call_tool("tool_a", {})
 
-    assert result.is_error is True
+    assert result.is_error is True  # type: ignore[attr-defined]
     assert "Strict Integrity Check Failed" in result.content[0].text  # type: ignore

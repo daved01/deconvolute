@@ -101,7 +101,7 @@ class MCPProxy:
         return {
             "name": tool.name,
             "description": tool.description,
-            "input_schema": tool.input_schema,
+            "input_schema": tool.input_schema,  # type: ignore[union-attr]
         }
 
     async def list_tools(self, *args: Any, **kwargs: Any) -> types.ListToolsResult:
@@ -243,7 +243,7 @@ class MCPProxy:
                                 "no longer advertised by the server.",
                             )
                         ],
-                        is_error=True,
+                        is_error=True,  # type: ignore[call-arg]
                     )
             except Exception as e:
                 try:
@@ -259,7 +259,7 @@ class MCPProxy:
                                 ),
                             )
                         ],
-                        is_error=True,
+                        is_error=True,  # type: ignore[call-arg]
                     )
                 finally:
                     # Log the event for the system error
@@ -334,7 +334,7 @@ class MCPProxy:
                         text=f"🚫 Security Violation: {reason}",
                     )
                 ],
-                is_error=True,
+                is_error=True,  # type: ignore[call-arg]
             )
 
         # Log Warnings if present (Audit mode)

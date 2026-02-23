@@ -17,7 +17,7 @@ async def handle_list_tools() -> list[types.Tool]:
         types.Tool(
             name="echo",
             description="Echoes back the input",
-            inputSchema={
+            input_schema={  # type: ignore[call-arg]
                 "type": "object",
                 "properties": {
                     "message": {"type": "string"},
@@ -28,7 +28,7 @@ async def handle_list_tools() -> list[types.Tool]:
         types.Tool(
             name="add",
             description="Adds two numbers",
-            inputSchema={
+            input_schema={  # type: ignore[call-arg]
                 "type": "object",
                 "properties": {
                     "a": {"type": "number"},

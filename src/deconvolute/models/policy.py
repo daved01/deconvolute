@@ -1,11 +1,11 @@
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from re import Pattern
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class PolicyAction(str, Enum):
+class PolicyAction(StrEnum):
     """
     Defines the available enforcement actions.
     """

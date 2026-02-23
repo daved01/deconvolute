@@ -301,7 +301,6 @@ name = "deconvolute"
 source = { editable = "." }
 dependencies = [
     { name = "lingua-language-detector" },
-    { name = "mcp" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "pyyaml" },
@@ -326,7 +325,6 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "lingua-language-detector", specifier = ">=2.1.1" },
-    { name = "mcp", specifier = ">=1.26.0" },
     { name = "pydantic", specifier = ">=2.0" },
     { name = "pydantic-settings", specifier = ">=2.0" },
     { name = "pyyaml", specifier = ">=6.0" },
@@ -337,7 +335,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "git-cliff", specifier = ">=2.11.0" },
-    { name = "mcp", specifier = ">=1.0.0" },
+    { name = "mcp", specifier = ">=1.26.0" },
     { name = "mypy", specifier = ">=1.0.0" },
     { name = "openai", specifier = ">=2.15.0" },
     { name = "pytest", specifier = ">=9.0" },

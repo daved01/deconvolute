@@ -134,7 +134,7 @@ class MCPProxy:
         # Observability Hook
         backend = get_backend()
         if backend:
-            # Helper to build ToolData from our internal interface
+            # Helper to build ToolData from internal interface
             def build_tool_data(tool_def: ToolInterface, is_allowed: bool) -> ToolData:
                 tool_hash = None
                 if is_allowed:

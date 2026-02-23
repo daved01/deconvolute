@@ -57,7 +57,6 @@ class MCPFirewall:
             return compiled
 
         for rule in server_policy.tools:
-            # Convert wildcard pattern to regex (e.g. "fs_*" -> "^fs_.*$")
             regex_str = "^" + re.escape(rule.name).replace("\\*", ".*") + "$"
             pattern = re.compile(regex_str, re.IGNORECASE)
 
@@ -99,24 +98,37 @@ class MCPFirewall:
             return False
 
     def _evaluate_rules(
-        self, tool_name: str, args: dict[str, Any] | None = None
+        self,
+        tool_name: str,
+        args: dict[str, Any] | None = None,
+        discovery_mode: bool = False,
     ) -> PolicyAction:
         """
         Fast runtime evaluation using pre-compiled rules.
+
+        Args:
+            tool_name: Name of the tool.
+            args: Arguments for the tool call (None during discovery).
+            discovery_mode: If True, allows conditional rules to pass without args.
         """
         # Start with the default action
         final_action = self.policy.default_action
 
         for rule in self._compiled_rules:
-            # 1. Fast Regex Match
             if rule.tool_pattern.match(tool_name):
-                # 2. Condition Check
                 should_apply = True
+
                 if rule.condition_code:
                     if args is not None:
+                        # Execution Phase: Strict evaluation
                         should_apply = self._safe_eval(rule.condition_code, args)
+                    elif discovery_mode:
+                        # Discovery Phase
+                        # Give benefit of the doubt so the tool can be snapshotted.
+                        should_apply = True
                     else:
-                        should_apply = False  # Condition exists but no args -> Skip
+                        # No args and not discovery -> cannot safely apply condition
+                        should_apply = False
 
                 if should_apply:
                     final_action = rule.action
@@ -144,7 +156,7 @@ class MCPFirewall:
                 continue
 
             # Evaluate policy without args (static permission)
-            action = self._evaluate_rules(name)
+            action = self._evaluate_rules(name, discovery_mode=True)
 
             if action in [PolicyAction.ALLOW, PolicyAction.WARN]:
                 # Register: Snapshot the tool definition for integrity checks
@@ -196,7 +208,7 @@ class MCPFirewall:
                 },
             )
 
-        # Policy Check
+        # Execution Phase: discovery_mode defaults to False for strict evaluation
         action: PolicyAction = self._evaluate_rules(tool_name, args)
 
         if action == PolicyAction.BLOCK:

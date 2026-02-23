@@ -1,11 +1,11 @@
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class SecurityStatus(str, Enum):
+class SecurityStatus(StrEnum):
     """
     The outcome of a security evaluation.
     """
@@ -18,7 +18,7 @@ class SecurityStatus(str, Enum):
 IntegrityLevel = Literal["snapshot", "strict"]
 
 
-class SecurityComponent(str, Enum):
+class SecurityComponent(StrEnum):
     """
     The system component that produced the result.
     """

@@ -1,12 +1,12 @@
 import os
 import sys
 
+import mcp.types as types
 import pytest
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 from deconvolute import mcp_guard
-from deconvolute.clients.mcp import MCPProxy
 
 # Skip tests if NOT running in live mode
 run_live = os.getenv("DCV_LIVE_TEST") == "true"
@@ -43,8 +43,6 @@ class TestLiveMCP:
                 except Exception as e:
                     pytest.skip(f"Skipping integration test config error: {e}")
 
-                assert isinstance(guarded_client, MCPProxy)
-
                 # Test list_tools
                 params = await guarded_client.list_tools()
                 tool_names = [t.name for t in params.tools]
@@ -61,13 +59,17 @@ class TestLiveMCP:
                     result = await guarded_client.call_tool(
                         "echo", arguments={"message": "Hello MCP"}
                     )
-                    assert not result.isError
-                    assert result.content[0].text == "Echo: Hello MCP"
+                    assert not result.is_error  # type: ignore[attr-defined]
+                    content = result.content[0]
+                    assert isinstance(content, types.TextContent)
+                    assert content.text == "Echo: Hello MCP"
 
                 # Test call_tool (Add)
                 if "add" in tool_names:
                     result = await guarded_client.call_tool(
                         "add", arguments={"a": 10, "b": 32}
                     )
-                    assert not result.isError
-                    assert result.content[0].text == "42"
+                    assert not result.is_error  # type: ignore[attr-defined]
+                    content = result.content[0]
+                    assert isinstance(content, types.TextContent)
+                    assert content.text == "42"

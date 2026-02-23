@@ -36,16 +36,29 @@ class MCPFirewall:
         """
         self.policy = policy
         self.registry = MCPSessionRegistry()
-        self._compiled_rules: list[CompiledRule] = self._compile_rules(policy.rules)
+        self.server_name: str | None = None
+        self._compiled_rules: list[CompiledRule] = []
 
-    def _compile_rules(self, rules: list[Any]) -> list[CompiledRule]:
+    def set_server(self, server_name: str) -> None:
         """
-        Transform raw policy rules into optimized executable rules.
+        Dynamically configures the firewall by compiling rules for the given server.
         """
-        compiled = []
-        for rule in rules:
+        self.server_name = server_name
+        self._compiled_rules = self._compile_rules(server_name)
+
+    def _compile_rules(self, server_name: str) -> list[CompiledRule]:
+        """
+        Transform raw policy rules into optimized executable rules by extracting
+        tool rules from the specific server's policy.
+        """
+        compiled: list[CompiledRule] = []
+        server_policy = self.policy.servers.get(server_name)
+        if not server_policy:
+            return compiled
+
+        for rule in server_policy.tools:
             # Convert wildcard pattern to regex (e.g. "fs_*" -> "^fs_.*$")
-            regex_str = "^" + re.escape(rule.tool).replace("\\*", ".*") + "$"
+            regex_str = "^" + re.escape(rule.name).replace("\\*", ".*") + "$"
             pattern = re.compile(regex_str, re.IGNORECASE)
 
             compiled.append(
@@ -53,7 +66,7 @@ class MCPFirewall:
                     tool_pattern=pattern,
                     action=rule.action,
                     condition_code=rule.condition,
-                    original_rule_str=rule.tool,
+                    original_rule_str=rule.name,
                 )
             )
         return compiled

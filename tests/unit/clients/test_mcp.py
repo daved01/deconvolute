@@ -58,15 +58,15 @@ def mock_firewall():
 @pytest.mark.asyncio
 async def test_list_tools_filtering_success(proxy, mock_session, mock_firewall):
     # Setup mock tools
-    tool_a = MagicMock(name="ToolA")
+    tool_a = MagicMock(name="Tool_a")
     tool_a.name = "allowed_tool"
     tool_a.description = "Allowed Tool Description"
-    tool_a.inputSchema = {"type": "object"}
+    tool_a.input_schema = {"type": "object"}
 
-    tool_b = MagicMock(name="ToolB")
+    tool_b = MagicMock(name="Tool_b")
     tool_b.name = "blocked_tool"
     tool_b.description = "Blocked Tool Description"
-    tool_b.inputSchema = {"type": "object"}
+    tool_b.input_schema = {"type": "object"}
 
     # Mock session response
     initial_result = MagicMock()
@@ -92,33 +92,6 @@ async def test_list_tools_filtering_success(proxy, mock_session, mock_firewall):
     mock_firewall.check_tool_list.assert_called_once()
     assert len(result.tools) == 1
     assert result.tools[0].name == "allowed_tool"
-
-
-@pytest.mark.asyncio
-async def test_normalize_tool_behavior(proxy):
-    # Case 1: Standard MCP Tool (camelCase inputSchema)
-    tool_camel = MagicMock()
-    tool_camel.name = "tool_camel"
-    tool_camel.description = "desc"
-    tool_camel.inputSchema = {"key": "val"}
-    # ensure input_schema attr doesn't exist to test fallback
-    del tool_camel.input_schema
-
-    norm_camel = proxy._normalize_tool(tool_camel)
-    assert norm_camel["name"] == "tool_camel"
-    assert norm_camel["input_schema"] == {"key": "val"}
-
-    # Case 2: Pythonic Tool (snake_case input_schema)
-    tool_snake = MagicMock()
-    tool_snake.name = "tool_snake"
-    tool_snake.description = "desc"
-    tool_snake.input_schema = {"key": "val_snake"}
-    # ensure inputSchema attr doesn't exist
-    del tool_snake.inputSchema
-
-    norm_snake = proxy._normalize_tool(tool_snake)
-    assert norm_snake["name"] == "tool_snake"
-    assert norm_snake["input_schema"] == {"key": "val_snake"}
 
 
 @pytest.mark.asyncio
@@ -160,7 +133,7 @@ async def test_call_tool_blocked(proxy, mock_session, mock_firewall, mock_mcp_mo
     types_mock = mock_mcp_modules
 
     mock_result_instance = MagicMock()
-    mock_result_instance.isError = True
+    mock_result_instance.is_error = True
     mock_result_instance.content = [MagicMock(text="🚫 Security Violation: bad tool")]
 
     # Configure the mock class constructor to return our instance
@@ -174,7 +147,7 @@ async def test_call_tool_blocked(proxy, mock_session, mock_firewall, mock_mcp_mo
         tool_name, args, current_tool_def=None
     )
     mock_session.call_tool.assert_not_called()
-    assert result.isError is True
+    assert result.is_error is True
     assert "Security Violation: bad tool" in result.content[0].text
 
 

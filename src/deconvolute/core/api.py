@@ -53,7 +53,7 @@ def mcp_guard(
             to this file asynchronously.
 
     Returns:
-        A CallToolResult with isError=True if the tool is unauthorized.
+        A CallToolResult with is_error=True if the tool is unauthorized.
 
     Raises:
         ConfigurationError: If the policy file is missing or invalid.
@@ -65,14 +65,14 @@ def mcp_guard(
         >>>
         >>> async with ClientSession(...) as session:
         >>>     secure_session = mcp_guard(session, "policy.yaml", integrity="strict")
-        >>>     # Use exactly as normal. Violations raise a SecurityResultError
+        >>>     # Use exactly as normal. Violations are stored in result.is_error
         >>>     await secure_session.initialize()
         >>>
         >>>     # Call a tool as normal
         >>>     result = await secure_session.call_tool("read_file",{"path": "doc.txt"})
         >>>
         >>>     # Check for security blocks (standard MCP error handling)
-        >>>     if result.isError:
+        >>>     if result.is_error:
         >>>         # This catches both Firewall blocks AND server-side errors
         >>>         print(f"Operation failed: {result.content[0].text}")
         >>>     else:

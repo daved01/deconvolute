@@ -55,12 +55,12 @@ async def test_list_tools_logs_discovery(proxy):
         tool_a = MagicMock(name="ToolA")
         tool_a.name = "allowed"
         tool_a.description = "Allowed tool"
-        tool_a.inputSchema = {}
+        tool_a.input_schema = {}
 
         tool_b = MagicMock(name="ToolB")
         tool_b.name = "blocked"
         tool_b.description = "Blocked tool"
-        tool_b.inputSchema = {}
+        tool_b.input_schema = {}
 
         # Mock session
         initial_result = MagicMock()
@@ -122,7 +122,7 @@ async def test_call_tool_logs_access_unsafe(proxy, mock_mcp_modules):
 
         # Mock CallToolResult
         types_mock = mock_mcp_modules
-        types_mock.CallToolResult.return_value = MagicMock(isError=True)
+        types_mock.CallToolResult.return_value = MagicMock(is_error=True)
 
         # Execute
         await proxy.call_tool("unsafe_tool")
@@ -151,7 +151,7 @@ async def test_call_tool_logs_integrity_violation(proxy, mock_mcp_modules):
 
         # Mock CallToolResult
         types_mock = mock_mcp_modules
-        types_mock.CallToolResult.return_value = MagicMock(isError=True)
+        types_mock.CallToolResult.return_value = MagicMock(is_error=True)
 
         # Execute
         await proxy.call_tool("vanished_tool")
@@ -179,7 +179,7 @@ async def test_call_tool_logs_strict_error(proxy, mock_mcp_modules):
 
         # Mock CallToolResult
         types_mock = mock_mcp_modules
-        types_mock.CallToolResult.return_value = MagicMock(isError=True)
+        types_mock.CallToolResult.return_value = MagicMock(is_error=True)
 
         # Execute
         await proxy.call_tool("any_tool")

@@ -37,6 +37,9 @@ def mock_session():
     async def mock_list_tools(*args, **kwargs):
         mock_result = MagicMock()
         mock_result.tools = session.tools_list
+
+        mock_result.next_cursor = None
+
         # Simulate model_copy returning the same structure with updated tools
         mock_result.model_copy.side_effect = lambda update: MagicMock(
             tools=update["tools"]
@@ -133,3 +136,74 @@ async def test_strict_mode_handles_server_error(mock_session, mock_firewall):
 
     assert result.is_error is True  # type: ignore[attr-defined]
     assert "Strict Integrity Check Failed" in result.content[0].text  # type: ignore
+
+
+@pytest.mark.asyncio
+async def test_strict_mode_pagination_success(mock_session, mock_firewall):
+    """Verify that strict mode checks multiple pages to find a tool."""
+    proxy = MCPProxy(mock_session, mock_firewall, integrity_mode="strict")
+
+    tool_a = MagicMock()
+    tool_a.name = "tool_a"
+    tool_b = MagicMock()
+    tool_b.name = "tool_b"
+
+    # Page 1 returns tool_a and next_cursor. Page 2 returns tool_b and no cursor
+    async def mock_list_tools(cursor=None, params=None, *args, **kwargs):
+        req_cursor = cursor or (params.cursor if params else None)
+        mock_result = MagicMock()
+        if not req_cursor:
+            mock_result.tools = [tool_a]
+            mock_result.next_cursor = "page2"
+        else:
+            mock_result.tools = [tool_b]
+            mock_result.next_cursor = None
+
+        mock_result.model_copy.side_effect = lambda update: MagicMock(
+            tools=update["tools"]
+        )
+        return mock_result
+
+    mock_session.list_tools = AsyncMock(side_effect=mock_list_tools)
+
+    await proxy.list_tools()  # Initial discovery
+
+    # Execute tool_b, needs pagination
+    await proxy.call_tool("tool_b", {})
+
+    # 1 (discovery) + 2 (pagination request 1, pagination request 2)
+    assert mock_session.list_tools.call_count == 3
+    mock_firewall.check_tool_call.assert_called()
+
+
+@pytest.mark.asyncio
+async def test_strict_mode_pagination_infinite_loop_protection(
+    mock_session, mock_firewall
+):
+    """Verify that pagination loop breaks when cursor doesn't change."""
+    proxy = MCPProxy(mock_session, mock_firewall, integrity_mode="strict")
+
+    tool_a = MagicMock()
+    tool_a.name = "tool_a"
+
+    # Server broken: always returns the same cursor
+    async def mock_list_tools(*args, **kwargs):
+        mock_result = MagicMock()
+        mock_result.tools = [tool_a]
+        mock_result.next_cursor = "stuck_cursor"
+        mock_result.model_copy.side_effect = lambda update: MagicMock(
+            tools=update["tools"]
+        )
+        return mock_result
+
+    mock_session.list_tools = AsyncMock(side_effect=mock_list_tools)
+
+    await proxy.list_tools()
+
+    # Call a missing tool. It should try page 1, see stuck_cursor, get page 2,
+    # see stuck_cursor again and realize it's an infinite loop, then stop.
+    result = await proxy.call_tool("tool_missing", {})
+
+    assert result.is_error is True  # type: ignore[attr-defined]
+    # 1 (discovery) + 2 (first request, second request with stuck_cursor)
+    assert mock_session.list_tools.call_count == 3

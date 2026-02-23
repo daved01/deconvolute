@@ -232,6 +232,76 @@ tools:
     action: "allow"   # This allows everything ELSE
 ```
 
+## Advanced: Preventing Server Identity Spoofing
+
+
+In standard MCP, server identity is self-attested. During initialization, the server tells the client its name. If an attacker redirects your agent into connecting to a malicious server, that server can simply hardcode its initialization response to match a highly trusted entity in your `policy.yaml` (like `secure_local_db`). Because the firewall would compile permissive rules based on this fake name, the attacker could register malicious tools under trusted names and bypass standard checks.
+
+To mitigate this, Deconvolute provides **Strict Origin Validation**. This decouples the security identity from the self-reported metadata and binds it directly to the verifiable physical transport layer.
+
+### The Policy Configuration
+
+You can define strict transport requirements in your `policy.yaml` using a discriminated union for either `stdio` or `sse` connections.
+
+```yaml
+version: "2.0"
+default_action: block
+servers:
+  # Prototype server: Relies on self-attested name only
+  dev_server:
+    tools:
+      - name: "echo"
+        action: allow
+
+  # Production server: Strictly bound to its local execution origin
+  secure_local_db:
+    transport:
+      type: "stdio"
+      command: "node"
+      args: ["build/index.js"]
+    tools:
+      - name: "query_db"
+        action: allow
+
+  # Remote agent: Strictly bound to its verified network endpoint
+  secure_remote_agent:
+    transport:
+      type: "sse"
+      url: "[https://api.trusted-ai-backend.com/v1/sse](https://api.trusted-ai-backend.com/v1/sse)"
+    tools:
+      - name: "trigger_workflow"
+        action: allow
+```
+
+### The Secure Context Managers
+
+Instead of managing the raw MCP transport and wrapping the session manually with `mcp_guard()`, use the dedicated secure wrappers. These abstract the boilerplate and capture the transport metadata securely.
+
+```python
+from mcp import StdioServerParameters
+from deconvolute.core.api import secure_stdio_session
+from deconvolute.errors import TransportSpoofingError
+
+params = StdioServerParameters(command="node", args=["build/index.js"])
+
+try:
+    # Deconvolute intercepts the transport parameters and validates them against the policy
+    async with secure_stdio_session(params, policy_path="policy.yaml") as session:
+        await session.initialize()
+        await session.list_tools()
+        # ... execution
+except TransportSpoofingError as e:
+    print(f"Infrastructure Attack Prevented: {e}")
+```
+
+### Architectural Note: Exceptions vs. Error Objects
+
+When a tool policy violation occurs during `call_tool`, Deconvolute returns an MCP `CallToolResult` with `is_error=True`. This is intentional. The session itself is still trusted, and returning an error object stays within the boundaries of the protocol, allowing the AI agent to read the error and gracefully adjust its approach.
+
+However, Server Identity Spoofing is an infrastructure level compromise. If the server is lying about its transport origin, the entire entity on the other side of the connection is fundamentally untrustworthy. You do not want to negotiate with a compromised server or allow the agent to interact with it at all.
+
+By raising a `TransportSpoofingError` before yielding the session context, Deconvolute "fails closed". The context manager block never executes, preventing your application from accidentally utilizing a malicious connection.
+
 
 ### Performance Characteristics
 

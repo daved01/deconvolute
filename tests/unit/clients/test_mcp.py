@@ -1,5 +1,6 @@
 import importlib
 import sys
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -8,6 +9,8 @@ from deconvolute.models.security import (
     SecurityComponent,
     SecurityResult,
     SecurityStatus,
+    SSEOrigin,
+    StdioOrigin,
 )
 
 
@@ -324,3 +327,67 @@ async def test_list_tools_discovery_event_server_details_missing_fields(
     assert logged_event.server_info["version"] == "unknown"
     assert "title" not in logged_event.server_info
     assert "description" not in logged_event.server_info
+
+
+@pytest.mark.asyncio
+@patch("deconvolute.core.api.mcp_guard")
+@patch("mcp.ClientSession", new_callable=MagicMock)
+@patch("mcp.client.stdio.stdio_client")
+async def test_secure_stdio_session_impl(
+    mock_stdio_client, mock_client_session, mock_mcp_guard
+):
+    from deconvolute.clients.mcp import secure_stdio_session_impl
+
+    # Setup the async context manager mocks
+    mock_stdio_client.return_value.__aenter__.return_value = (MagicMock(), MagicMock())
+    mock_session_instance = MagicMock()
+    mock_client_session.return_value.__aenter__.return_value = mock_session_instance
+
+    mock_guarded_session = MagicMock()
+    mock_mcp_guard.return_value = mock_guarded_session
+
+    # Mock server parameters
+    params = SimpleNamespace(command="python", args=["server.py"])
+
+    async with secure_stdio_session_impl(params, "policy.yaml") as session:
+        assert session == mock_guarded_session
+
+        # Verify mcp_guard was called with the correctly formatted StdioOrigin
+        mock_mcp_guard.assert_called_once()
+        call_kwargs = mock_mcp_guard.call_args[1]
+
+        origin = call_kwargs.get("transport_origin")
+        assert isinstance(origin, StdioOrigin)
+        assert origin.command == "python"
+        assert origin.args == ["server.py"]
+
+
+@pytest.mark.asyncio
+@patch("deconvolute.core.api.mcp_guard")
+@patch("mcp.ClientSession", new_callable=MagicMock)
+@patch("mcp.client.sse.sse_client")
+async def test_secure_sse_session_impl(
+    mock_sse_client, mock_client_session, mock_mcp_guard
+):
+    from deconvolute.clients.mcp import secure_sse_session_impl
+
+    # Setup the async context manager mocks
+    mock_sse_client.return_value.__aenter__.return_value = (MagicMock(), MagicMock())
+    mock_session_instance = MagicMock()
+    mock_client_session.return_value.__aenter__.return_value = mock_session_instance
+
+    mock_guarded_session = MagicMock()
+    mock_mcp_guard.return_value = mock_guarded_session
+
+    url = "https://api.trusted.com/sse"
+
+    async with secure_sse_session_impl(url, "policy.yaml") as session:
+        assert session == mock_guarded_session
+
+        # Verify mcp_guard was called with the correctly formatted SSEOrigin
+        mock_mcp_guard.assert_called_once()
+        call_kwargs = mock_mcp_guard.call_args[1]
+
+        origin = call_kwargs.get("transport_origin")
+        assert isinstance(origin, SSEOrigin)
+        assert origin.url == url

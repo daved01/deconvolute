@@ -417,7 +417,9 @@ async def secure_stdio_session_impl(
     integrity: IntegrityLevel = "snapshot",
     audit_log: str | None = None,
 ) -> AsyncIterator[Any]:
-    """Implementation for the secure stdio transport wrapper."""
+    """
+    Implementation for the secure stdio transport wrapper.
+    """
     from mcp.client.stdio import stdio_client
 
     from deconvolute.core.api import mcp_guard
@@ -447,7 +449,9 @@ async def secure_sse_session_impl(
     integrity: IntegrityLevel = "snapshot",
     audit_log: str | None = None,
 ) -> AsyncIterator[Any]:
-    """Implementation for the secure sse transport wrapper."""
+    """
+    Implementation for the secure sse transport wrapper.
+    """
     from mcp.client.sse import sse_client
 
     from deconvolute.core.api import mcp_guard

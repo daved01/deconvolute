@@ -6,7 +6,12 @@ import yaml
 
 from deconvolute.core.policy import PolicyLoader
 from deconvolute.errors import ConfigurationError
-from deconvolute.models.policy import PolicyAction, SecurityPolicy
+from deconvolute.models.policy import (
+    PolicyAction,
+    SecurityPolicy,
+    SSETransportRule,
+    StdioTransportRule,
+)
 
 
 class TestPolicyLoader:
@@ -77,5 +82,48 @@ class TestPolicyLoader:
         try:
             with pytest.raises(ConfigurationError, match="Failed to parse policy file"):
                 PolicyLoader.load(policy_path)
+        finally:
+            os.remove(policy_path)
+
+    def test_load_policy_with_transport(self):
+        """Test loading a policy that defines strict transport origins."""
+        policy_data = {
+            "version": "2.0",
+            "default_action": "block",
+            "servers": {
+                "local_db": {
+                    "transport": {
+                        "type": "stdio",
+                        "command": "node",
+                        "args": ["build/index.js"],
+                    },
+                    "tools": [],
+                },
+                "remote_agent": {
+                    "transport": {"type": "sse", "url": "https://trusted.example.com"},
+                    "tools": [],
+                },
+            },
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            yaml.dump(policy_data, f)
+            policy_path = f.name
+
+        try:
+            policy = PolicyLoader.load(policy_path)
+
+            # Verify stdio union parsed correctly
+            local_transport = policy.servers["local_db"].transport
+            assert isinstance(local_transport, StdioTransportRule)
+            assert local_transport.type == "stdio"
+            assert local_transport.command == "node"
+            assert local_transport.args == ["build/index.js"]
+
+            # Verify sse union parsed correctly
+            remote_transport = policy.servers["remote_agent"].transport
+            assert isinstance(remote_transport, SSETransportRule)
+            assert remote_transport.type == "sse"
+            assert remote_transport.url == "https://trusted.example.com"
         finally:
             os.remove(policy_path)

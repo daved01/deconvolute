@@ -1,5 +1,7 @@
 import os
-from typing import Literal, TypeVar
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+from typing import Any, Literal, TypeVar
 
 from deconvolute.constants import DEFAULT_MCP_POLICY_FILENAME
 from deconvolute.core.defaults import get_guard_defaults, get_scan_defaults
@@ -10,6 +12,7 @@ from deconvolute.models.security import (
     SecurityComponent,
     SecurityResult,
     SecurityStatus,
+    TransportOrigin,
 )
 from deconvolute.observability import configure_observability
 from deconvolute.scanners.base import BaseScanner
@@ -26,6 +29,7 @@ def mcp_guard(
     policy_path: str = DEFAULT_MCP_POLICY_FILENAME,
     integrity: Literal["snapshot", "strict"] = "snapshot",
     audit_log: str | None = None,
+    transport_origin: TransportOrigin | None = None,
 ) -> T:
     """
     Wraps an MCP ClientSession with the Deconvolute Firewall.
@@ -78,10 +82,10 @@ def mcp_guard(
         >>>     else:
         >>>         print(f"Success: {result.content[0].text}")
     """
-    # 1. Configure Observability (Singleton)
+    # Configure Observability (Singleton)
     configure_observability(audit_log)
 
-    # 2. Load & Validate Policy (Fails fast if missing)
+    # Load & Validate Policy (Fails fast if missing)
     # We load this BEFORE importing the proxy to ensure configuration is valid.
     policy = PolicyLoader.load(policy_path)
 
@@ -107,10 +111,18 @@ def mcp_guard(
         f"(Integrity: {integrity})"
     )
 
+    import typing
+
     # Return the wrapped client
-    # We ignore return-value because MCPProxy dynamically mimics T
-    # We ignore arg-type because client is T but MCPProxy expects ClientSession
-    return MCPProxy(client, firewall, integrity_mode=integrity)  # type: ignore[return-value, arg-type]
+    return typing.cast(
+        T,
+        MCPProxy(
+            typing.cast(Any, client),
+            firewall,
+            integrity_mode=integrity,
+            transport_origin=transport_origin,
+        ),
+    )
 
 
 def llm_guard(
@@ -312,3 +324,86 @@ def _resolve_configuration(
                 s.api_key = final_key
 
     return scanners
+
+
+@asynccontextmanager
+async def secure_stdio_session(
+    server_parameters: Any,
+    policy_path: str = DEFAULT_MCP_POLICY_FILENAME,
+    integrity: Literal["snapshot", "strict"] = "snapshot",
+    audit_log: str | None = None,
+) -> AsyncIterator[Any]:
+    """
+    Secure context manager for MCP stdio connections.
+
+    Establishes a local stdio connection to an MCP server while enforcing
+    strict origin validation to prevent Server Identity Spoofing. The local
+    executable path and arguments are verified against the specified security
+    policy before the session is yielded to the application.
+
+    Args:
+        server_parameters: The `mcp.StdioServerParameters` defining the local
+            command and arguments used to spawn the server process.
+        policy_path: Path to the security policy YAML file. Defaults to "policy.yaml".
+        integrity: The integrity check mode.
+            - "snapshot" (Default): Verifies tools against the definition seen at
+                startup.
+            - "strict": Forces a re-verification of the tool definition before every
+                execution.
+        audit_log: Optional path to write a JSONL file to record all security events.
+
+    Yields:
+        MCPProxy: A secure proxy wrapping the active `mcp.ClientSession`.
+
+    Raises:
+        TransportSpoofingError: If the actual `server_parameters` do not strictly match
+            the expected transport origin defined in the server's policy.
+        DeconvoluteError: If the 'mcp' library is not installed or initialization fails.
+    """
+    from deconvolute.clients.mcp import secure_stdio_session_impl
+
+    async with secure_stdio_session_impl(
+        server_parameters, policy_path, integrity, audit_log
+    ) as session:
+        yield session
+
+
+@asynccontextmanager
+async def secure_sse_session(
+    url: str,
+    policy_path: str = DEFAULT_MCP_POLICY_FILENAME,
+    integrity: Literal["snapshot", "strict"] = "snapshot",
+    audit_log: str | None = None,
+) -> AsyncIterator[Any]:
+    """
+    Secure context manager for MCP Server-Sent Events (SSE) connections.
+
+    Establishes a remote network connection to an MCP server while enforcing
+    strict origin validation to prevent Server Identity Spoofing. The remote
+    URL is verified against the specified security policy before the session
+    is yielded to the application.
+
+    Args:
+        url: The HTTP(S) URL of the remote MCP server's SSE endpoint.
+        policy_path: Path to the security policy YAML file. Defaults to "policy.yaml".
+        integrity: The integrity check mode.
+            - "snapshot" (Default): Verifies tools against the definition seen at
+                startup.
+            - "strict": Forces a re-verification of the tool definition before every
+                execution.
+        audit_log: Optional path to write a JSONL file to record all security events.
+
+    Yields:
+        MCPProxy: A secure proxy wrapping the active `mcp.ClientSession`.
+
+    Raises:
+        TransportSpoofingError: If the requested `url` does not strictly match
+            the expected transport origin defined in the server's policy.
+        DeconvoluteError: If the 'mcp' library is not installed or initialization fails.
+    """
+    from deconvolute.clients.mcp import secure_sse_session_impl
+
+    async with secure_sse_session_impl(
+        url, policy_path, integrity, audit_log
+    ) as session:
+        yield session

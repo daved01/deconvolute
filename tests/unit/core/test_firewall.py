@@ -1,13 +1,16 @@
 import pytest
 
 from deconvolute.core.firewall import MCPFirewall
+from deconvolute.errors import TransportSpoofingError
 from deconvolute.models.policy import (
     PolicyAction,
     SecurityPolicy,
     ServerPolicy,
+    SSETransportRule,
+    StdioTransportRule,
     ToolRule,
 )
-from deconvolute.models.security import SecurityStatus
+from deconvolute.models.security import SecurityStatus, SSEOrigin, StdioOrigin
 
 
 @pytest.fixture
@@ -309,3 +312,129 @@ def test_check_tool_call_policy_enforcement(firewall):
     result = firewall.check_tool_call("random.tool", {})
     assert result.status == SecurityStatus.SAFE
     assert result.metadata["action"] == "allow"
+
+
+def test_verify_transport_origin_no_rule(firewall):
+    # The default 'local' server has no transport rule
+    origin = StdioOrigin(type="stdio", command="python", args=[])
+    # Should not raise anything
+    firewall._verify_transport_origin("local", origin)
+
+
+def test_verify_transport_origin_type_mismatch():
+    policy = SecurityPolicy(
+        version="2.0",
+        default_action=PolicyAction.BLOCK,
+        servers={
+            "local": ServerPolicy(
+                transport=StdioTransportRule(type="stdio", command="python", args=[]),
+                tools=[],
+            )
+        },
+    )
+    fw = MCPFirewall(policy)
+    fw.set_server("local")
+
+    origin = SSEOrigin(type="sse", url="http://local")
+    with pytest.raises(TransportSpoofingError, match="Transport type mismatch"):
+        fw._verify_transport_origin("local", origin)
+
+
+def test_verify_transport_origin_stdio_success():
+    policy = SecurityPolicy(
+        version="2.0",
+        default_action=PolicyAction.BLOCK,
+        servers={
+            "local": ServerPolicy(
+                transport=StdioTransportRule(
+                    type="stdio", command="python", args=["app.py"]
+                ),
+                tools=[],
+            )
+        },
+    )
+    fw = MCPFirewall(policy)
+    fw.set_server("local")
+
+    origin = StdioOrigin(type="stdio", command="python", args=["app.py"])
+    # Should not raise
+    fw._verify_transport_origin("local", origin)
+
+
+def test_verify_transport_origin_stdio_command_mismatch():
+    policy = SecurityPolicy(
+        version="2.0",
+        default_action=PolicyAction.BLOCK,
+        servers={
+            "local": ServerPolicy(
+                transport=StdioTransportRule(
+                    type="stdio", command="node", args=["app.js"]
+                ),
+                tools=[],
+            )
+        },
+    )
+    fw = MCPFirewall(policy)
+    fw.set_server("local")
+
+    origin = StdioOrigin(type="stdio", command="python", args=["app.js"])
+    with pytest.raises(TransportSpoofingError, match="Command mismatch"):
+        fw._verify_transport_origin("local", origin)
+
+
+def test_verify_transport_origin_stdio_args_mismatch():
+    policy = SecurityPolicy(
+        version="2.0",
+        default_action=PolicyAction.BLOCK,
+        servers={
+            "local": ServerPolicy(
+                transport=StdioTransportRule(
+                    type="stdio", command="node", args=["app.js"]
+                ),
+                tools=[],
+            )
+        },
+    )
+    fw = MCPFirewall(policy)
+    fw.set_server("local")
+
+    origin = StdioOrigin(type="stdio", command="node", args=["evil.js"])
+    with pytest.raises(TransportSpoofingError, match="Arguments mismatch"):
+        fw._verify_transport_origin("local", origin)
+
+
+def test_verify_transport_origin_sse_success():
+    policy = SecurityPolicy(
+        version="2.0",
+        default_action=PolicyAction.BLOCK,
+        servers={
+            "local": ServerPolicy(
+                transport=SSETransportRule(type="sse", url="https://trusted.com"),
+                tools=[],
+            )
+        },
+    )
+    fw = MCPFirewall(policy)
+    fw.set_server("local")
+
+    origin = SSEOrigin(type="sse", url="https://trusted.com/events")
+    fw._verify_transport_origin("local", origin)
+
+
+def test_verify_transport_origin_sse_mismatch():
+    policy = SecurityPolicy(
+        version="2.0",
+        default_action=PolicyAction.BLOCK,
+        servers={
+            "local": ServerPolicy(
+                transport=SSETransportRule(type="sse", url="https://trusted.com"),
+                tools=[],
+            )
+        },
+    )
+    fw = MCPFirewall(policy)
+    fw.set_server("local")
+
+    origin = SSEOrigin(type="sse", url="https://evil.com/events")
+    with pytest.raises(TransportSpoofingError, match="URL mismatch"):
+        fw._verify_transport_origin("local", origin)

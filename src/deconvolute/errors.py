@@ -46,3 +46,12 @@ class MCPSessionError(DeconvoluteError):
     """
 
     pass
+
+
+class TransportSpoofingError(MCPSessionError):
+    """
+    Raised when the physical origin of a connection does not match
+    the transport requirements defined in the security policy.
+    """
+
+    pass

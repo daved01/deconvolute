@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from enum import StrEnum
 from re import Pattern
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -33,13 +34,49 @@ class ToolRule(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class StdioTransportRule(BaseModel):
+    """
+    Origin validation rules for local stdio connections.
+    """
+
+    type: Literal["stdio"]
+    command: str | None = Field(
+        None, description="The exact executable required (e.g. 'python')."
+    )
+    args: list[str] | None = Field(
+        None, description="The exact arguments required to prevent execution hijacking."
+    )
+    model_config = ConfigDict(frozen=True)
+
+
+class SSETransportRule(BaseModel):
+    """
+    Origin validation rules for remote SSE connections.
+    """
+
+    type: Literal["sse"]
+    url: str | None = Field(
+        None, description="The exact URL or base URL required for the connection."
+    )
+    model_config = ConfigDict(frozen=True)
+
+
+TransportRule = Annotated[
+    StdioTransportRule | SSETransportRule, Field(discriminator="type")
+]
+
+
 class ServerPolicy(BaseModel):
     """
     Policies applied to tools exposed by a specific server.
     """
 
     description: str | None = Field(
-        None, description="Optional description of the server"
+        default=None, description="Optional description of the server"
+    )
+
+    transport: TransportRule | None = Field(
+        default=None, description="Optional strict transport origin validation."
     )
 
     tools: list[ToolRule] = Field(default_factory=list)

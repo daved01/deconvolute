@@ -88,6 +88,22 @@ servers:
 
 The firewall loads this policy at runtime. If a blocked tool is called, the SDK blocks the request locally without contacting the server.
 
+### Strict Origin Validation (Advanced)
+
+By default, the firewall relies on the server's self-reported name. To prevent Server Identity Spoofing where a malicious server claims a trusted name, Deconvolute provides advanced secure context managers. These bind the server's identity directly to its physical transport origin (e.g. local executable path or remote URL).
+
+```python
+from deconvolute.core.api import secure_stdio_session
+from mcp import StdioServerParameters
+
+params = StdioServerParameters(command="python", args=["my_trusted_tool.py"])
+
+# Enforces that the physical origin matches the policy BEFORE the session starts
+async with secure_stdio_session(params, policy_path="policy.yaml") as safe_session:
+    await safe_session.initialize()
+    # Execute tools with cryptographic certainty of the server's identity
+```
+
 ### Audit Logging
 
 Deconvolute can produce a detailed audit log of every tool discovery and execution event, useful for debugging policy issues and maintaining a security paper trail.

@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -71,3 +71,27 @@ class SecurityResult(BaseModel):
         Returns False if execution must be stopped (UNSAFE).
         """
         return self.status != SecurityStatus.UNSAFE
+
+
+class StdioOrigin(BaseModel):
+    """
+    The actual physical parameters of a local stdio connection.
+    """
+
+    type: Literal["stdio"]
+    command: str
+    args: list[str]
+    model_config = ConfigDict(frozen=True)
+
+
+class SSEOrigin(BaseModel):
+    """
+    The actual physical parameters of a remote SSE connection.
+    """
+
+    type: Literal["sse"]
+    url: str
+    model_config = ConfigDict(frozen=True)
+
+
+TransportOrigin = Annotated[StdioOrigin | SSEOrigin, Field(discriminator="type")]

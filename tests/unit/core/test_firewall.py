@@ -481,11 +481,14 @@ def test_evaluate_rules_cel_corner_cases(firewall, caplog):
         == PolicyAction.BLOCK
     )
 
-    # non-boolean return 0 (falsy) - CEL size() returns CEL int which
-    # truthifies to False if 0.
-    # Wait, in CEL, expressions used as conditions must evaluate to bool.
-    # However, we cast to bool in python.
-    # celpy evaluates `size(args.items)` to `celtypes.IntType`.
-    # `bool(celtypes.IntType(0))` is False, `bool(celtypes.IntType(2))` is True.
-    assert fw._evaluate_rules("nonbool.tool", {"items": [1, 2]}) == PolicyAction.ALLOW
-    assert fw._evaluate_rules("nonbool.tool", {"items": []}) == PolicyAction.BLOCK
+    # non-boolean return 0 or 2 - CEL size() returns CEL int.
+    # The firewall now strictly enforces boolean returns for security.
+    # Therefore, both should fail closed (BLOCK) and log a warning.
+    with caplog.at_level("WARNING"):
+        assert (
+            fw._evaluate_rules("nonbool.tool", {"items": [1, 2]}) == PolicyAction.BLOCK
+        )
+        assert "returned a non-boolean type" in caplog.text
+
+    with caplog.at_level("WARNING"):
+        assert fw._evaluate_rules("nonbool.tool", {"items": []}) == PolicyAction.BLOCK

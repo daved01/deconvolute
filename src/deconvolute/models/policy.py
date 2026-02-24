@@ -30,7 +30,7 @@ class ToolRule(BaseModel):
     action: PolicyAction = Field(..., description="The enforcement action to take.")
 
     condition: str | None = Field(
-        None, description="Python-like expression for argument validation."
+        None, description="CEL expression for argument validation."
     )
 
     reason: str | None = Field(None, description="Human-readable explanation for logs.")

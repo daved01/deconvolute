@@ -208,7 +208,18 @@ class MCPFirewall:
                             # into CEL maps
                             activation = celpy.json_to_cel({"args": args})  # type: ignore[attr-defined]
                             result = rule.compiled_condition.evaluate(activation)
-                            should_apply = bool(result)
+
+                            # Enforce strict boolean
+                            if isinstance(result, celpy.celtypes.BoolType):
+                                should_apply = bool(result)
+                            else:
+                                logger.warning(
+                                    f"Firewall: CEL condition for '{tool_name}' "
+                                    "returned a non-boolean type "
+                                    f"({type(result).__name__}). Failing closed."
+                                )
+                                should_apply = False
+
                         except Exception as error:
                             logger.warning(
                                 "Firewall: CEL evaluation error for tool "

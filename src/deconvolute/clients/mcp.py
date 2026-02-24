@@ -416,7 +416,7 @@ async def secure_stdio_session_impl(
     policy_path: str,
     integrity: IntegrityLevel = "snapshot",
     audit_log: str | None = None,
-) -> AsyncIterator[MCPProxy]:
+) -> AsyncIterator[Any]:
     """Implementation for the secure stdio transport wrapper."""
     from mcp.client.stdio import stdio_client
 
@@ -446,7 +446,7 @@ async def secure_sse_session_impl(
     policy_path: str,
     integrity: IntegrityLevel = "snapshot",
     audit_log: str | None = None,
-) -> AsyncIterator[MCPProxy]:
+) -> AsyncIterator[Any]:
     """Implementation for the secure sse transport wrapper."""
     from mcp.client.sse import sse_client
 

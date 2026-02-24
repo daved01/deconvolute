@@ -1,6 +1,6 @@
 import re
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 from deconvolute.core.mcp_session import MCPSessionRegistry
 from deconvolute.core.types import ToolInterface
@@ -63,10 +63,11 @@ class MCPFirewall:
         Validates that the connection's physical origin matches the policy's strict
         requirements.
 
-        This mechanism prevents Server Identity Spoofing. When an MCP server initializes,
-        it self-reports its name. This function cross-references that self-reported name
-        against the verified transport metadata (e.g., the local executable path or the
-        remote SSE URL) defined in the security policy.
+        This mechanism prevents Server Identity Spoofing. When an MCP server
+        initializes, it self-reports its name. This function cross-references
+        that self-reported name against the verified transport metadata
+        (e.g. the local executable path or the remote SSE URL) defined in
+        the security policy.
 
         Args:
             server_name: The self-reported name of the MCP server discovered during
@@ -103,8 +104,10 @@ class MCPFirewall:
             )
 
         if origin.type == "stdio":
+            from deconvolute.models.policy import StdioTransportRule
+
             # Both are now strongly typed as stdio variants
-            expected_stdio = transport_rule
+            expected_stdio = cast(StdioTransportRule, transport_rule)
 
             if expected_stdio.command and expected_stdio.command != origin.command:
                 logger.error(
@@ -130,7 +133,9 @@ class MCPFirewall:
             )
 
         elif origin.type == "sse":
-            expected_sse = transport_rule
+            from deconvolute.models.policy import SSETransportRule
+
+            expected_sse = cast(SSETransportRule, transport_rule)
 
             if expected_sse.url and not origin.url.startswith(expected_sse.url):
                 logger.error(

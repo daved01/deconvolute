@@ -72,11 +72,11 @@ class ServerPolicy(BaseModel):
     """
 
     description: str | None = Field(
-        None, description="Optional description of the server"
+        default=None, description="Optional description of the server"
     )
 
     transport: TransportRule | None = Field(
-        None, description="Optional strict transport origin validation."
+        default=None, description="Optional strict transport origin validation."
     )
 
     tools: list[ToolRule] = Field(default_factory=list)

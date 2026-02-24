@@ -111,12 +111,18 @@ def mcp_guard(
         f"(Integrity: {integrity})"
     )
 
+    import typing
+
     # Return the wrapped client
-    # We ignore return-value because MCPProxy dynamically mimics T
-    # We ignore arg-type because client is T but MCPProxy expects ClientSession
-    return MCPProxy(
-        client, firewall, integrity_mode=integrity, transport_origin=transport_origin
-    )  # type: ignore[return-value, arg-type]
+    return typing.cast(
+        T,
+        MCPProxy(
+            typing.cast(Any, client),
+            firewall,
+            integrity_mode=integrity,
+            transport_origin=transport_origin,
+        ),
+    )
 
 
 def llm_guard(

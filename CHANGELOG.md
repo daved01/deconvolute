@@ -1,8 +1,31 @@
+## [0.1.0a15] - 2026-02-24
+
+### 🚀 Features
+
+- Add extended policy and remove camelCase (#28)
+- Introduce First Match Wins evaluation of policy
+- Add server_info to DiscoveryEvent for better observability
+- Add transport layer verification
+- Add common expression language (CEL) for conditions in policy
+
+### 📚 Documentation
+
+- Update readme
+
+### ⚙️ Miscellaneous Tasks
+
+- Fix exports
+- Fix bugs late wrapping and conditional discovery
+- Handle pagination of tools correctly
 ## [0.1.0a14] - 2026-02-15
 
 ### 🚀 Features
 
 - Add client session id and logging of hash for better observability diff
+
+### ⚙️ Miscellaneous Tasks
+
+- Prepare v0.1.0a14
 ## [0.1.0a13] - 2026-02-15
 
 ### 🚀 Features
@@ -50,6 +73,8 @@
 
 ### 📚 Documentation
 
+- Update readme
+- Update readme
 - Update readme and user guide to reflect new features (#17)
 
 ### ⚙️ Miscellaneous Tasks

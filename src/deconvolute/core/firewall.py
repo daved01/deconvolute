@@ -1,6 +1,7 @@
 import re
-from types import SimpleNamespace
 from typing import Any, cast
+
+import celpy
 
 from deconvolute.core.mcp_session import MCPSessionRegistry
 from deconvolute.core.types import ToolInterface
@@ -169,38 +170,12 @@ class MCPFirewall:
                 CompiledRule(
                     tool_pattern=pattern,
                     action=rule.action,
-                    condition_code=rule.condition,
+                    # Pass the pre-compiled CEL program directly
+                    compiled_condition=rule.compiled_condition,
                     original_rule_str=rule.name,
                 )
             )
         return compiled
-
-    def _dict_to_namespace(self, data: Any) -> Any:
-        """
-        Recursively converts a dictionary to a SimpleNamespace to allow
-        dot-notation access in policy conditions (e.g. args.path).
-        """
-        if isinstance(data, dict):
-            return SimpleNamespace(
-                **{k: self._dict_to_namespace(v) for k, v in data.items()}
-            )
-        if isinstance(data, list):
-            return [self._dict_to_namespace(i) for i in data]
-        return data
-
-    def _safe_eval(self, expression: str, args: dict[str, Any]) -> bool:
-        """
-        Safely executes condition code using simpleeval.
-        """
-        try:
-            from simpleeval import SimpleEval
-
-            wrapped_args = self._dict_to_namespace(args)
-            s = SimpleEval(names={"args": wrapped_args})
-            return bool(s.eval(expression))
-        except Exception as e:
-            logger.warning(f"Firewall: Condition runtime error: {e}")
-            return False
 
     def _evaluate_rules(
         self,
@@ -224,20 +199,42 @@ class MCPFirewall:
             if rule.tool_pattern.match(tool_name):
                 should_apply = True
 
-                if rule.condition_code:
+                if rule.compiled_condition:
                     if args is not None:
-                        # Execution Phase: Strict evaluation
-                        should_apply = self._safe_eval(rule.condition_code, args)
+                        # Execution Phase: Strict CEL evaluation wrapped in a
+                        # fail-closed try block
+                        try:
+                            # celpy natively converts standard Python dictionaries
+                            # into CEL maps
+                            activation = celpy.json_to_cel({"args": args})  # type: ignore[attr-defined]
+                            result = rule.compiled_condition.evaluate(activation)
+
+                            # Enforce strict boolean
+                            if isinstance(result, celpy.celtypes.BoolType):
+                                should_apply = bool(result)
+                            else:
+                                logger.warning(
+                                    f"Firewall: CEL condition for '{tool_name}' "
+                                    "returned a non-boolean type "
+                                    f"({type(result).__name__}). Failing closed."
+                                )
+                                should_apply = False
+
+                        except Exception as error:
+                            logger.warning(
+                                "Firewall: CEL evaluation error for tool "
+                                f"'{tool_name}'. Failing closed (blocking). "
+                                f"Error: {error}"
+                            )
+                            should_apply = False
                     elif discovery_mode:
                         # Discovery Phase
-                        # Give benefit of the doubt so the tool can be snapshotted.
                         should_apply = True
                     else:
                         # No args and not discovery -> cannot safely apply condition
                         should_apply = False
 
                 if should_apply:
-                    # First Match Wins. We exit immediately once a rule matches.
                     return rule.action
 
         return self.policy.default_action

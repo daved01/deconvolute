@@ -104,6 +104,21 @@ async with secure_stdio_session(params, policy_path="policy.yaml") as safe_sessi
     # Execute tools with cryptographic certainty of the server's identity
 ```
 
+### Enterprise-Grade Policy Engine
+
+Deconvolute goes beyond simple allow/block lists. For strict security environments, it includes a robust, zero-trust rules engine powered by the Common Expression Language (CEL). 
+
+Write fine-grained, conditional policies to inspect tool arguments in real-time before they execute:
+
+```yaml
+tools:
+  - name: "execute_script"
+    action: block
+    condition: 'args.script_name == "rm" || args.force_delete == true'
+```
+
+CEL is the same highly performant, memory-safe language used by Kubernetes and Envoy, ensuring your AI agents remain strictly bounded.
+
 ### Audit Logging
 
 Deconvolute can produce a detailed audit log of every tool discovery and execution event, useful for debugging policy issues and maintaining a security paper trail.

@@ -232,7 +232,7 @@ tools:
     action: "allow"   # This allows everything ELSE
 ```
 
-## Advanced: Preventing Server Identity Spoofing
+### Advanced: Preventing Server Identity Spoofing
 
 
 In standard MCP, server identity is self-attested. During initialization, the server tells the client its name. If an attacker redirects your agent into connecting to a malicious server, that server can simply hardcode its initialization response to match a highly trusted entity in your `policy.yaml` (like `secure_local_db`). Because the firewall would compile permissive rules based on this fake name, the attacker could register malicious tools under trusted names and bypass standard checks.
@@ -293,6 +293,47 @@ try:
 except TransportSpoofingError as e:
     print(f"Infrastructure Attack Prevented: {e}")
 ```
+
+### Advanced Policy Conditions (CEL)
+
+Deconvolute utilizes the Common Expression Language (CEL) for evaluating advanced, cross-variable security policies. CEL provides a memory-safe, deterministic execution environment, making it the industry standard for strict compliance and zero-trust security.
+
+While beginners can stick to simple allow/block actions based on the tool's name, advanced users can define a condition string to inspect the runtime arguments passed to the tool before execution is permitted.
+
+#### The Evaluation Context
+
+Every condition is evaluated against the specific arguments provided by the AI agent to the tool. These arguments are exposed in the policy under the args variable.
+
+**Example:** If a tool expects `{"filepath": "/tmp/test.txt", "force": true}`, you can access these values in your policy using `args.filepath` and `args.force`.
+
+#### Supported Operators
+
+CEL syntax is highly intuitive and uses standard programmatic operators:
+
+- Comparisons: `==`, `!=`, `<`, `>`, `<=`, `>=`
+- Logical: `&&` (and), `||` (or), `!` (not)
+- Membership: in (e.g. `args.role in ["admin", "user"]`)
+
+#### Common Macros & Functions
+
+CEL provides powerful built-in macros for robust string matching and data validation:
+
+- `startsWith(string)`: `args.path.startsWith("/public/")`
+- `endsWith(string)`: `args.filename.endsWith(".csv")`
+- `contains(string)`: `args.query.contains("SELECT")`
+- `matches(regex)`: `args.email.matches("^[a-zA-Z0-9]+@company\\.com$")`
+- `size()`: `args.data.size() < 500`
+
+#### Example Usage
+
+```yaml
+tools:
+  - name: "execute_script"
+    action: block
+    condition: 'args.script_name == "rm" || args.force_delete == true'
+    reason: "Prevent forceful deletions or execution of rm command"
+```
+
 
 ### Architectural Note: Exceptions vs. Error Objects
 

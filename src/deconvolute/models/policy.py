@@ -1,9 +1,13 @@
 from dataclasses import dataclass
 from enum import StrEnum
 from re import Pattern
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+import celpy
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
+
+# Initialize the CEL Environment Singleton once for the entire application
+CEL_ENV = celpy.Environment()
 
 
 class PolicyAction(StrEnum):
@@ -26,12 +30,35 @@ class ToolRule(BaseModel):
     action: PolicyAction = Field(..., description="The enforcement action to take.")
 
     condition: str | None = Field(
-        None, description="Python-like expression for argument validation."
+        None, description="CEL expression for argument validation."
     )
 
     reason: str | None = Field(None, description="Human-readable explanation for logs.")
 
+    # Use a PrivateAttr to hold the compiled AST without breaking standard validation
+    _compiled_condition: Any = PrivateAttr(default=None)
+
     model_config = ConfigDict(frozen=True)
+
+    # Fail-fast compilation during validation
+    @model_validator(mode="after")
+    def compile_cel_condition(self) -> "ToolRule":
+        if self.condition:
+            try:
+                ast = CEL_ENV.compile(self.condition)
+                self._compiled_condition = CEL_ENV.program(ast)
+            except (
+                celpy.CELEvalError,  # type: ignore[attr-defined]
+                celpy.CELParseError,  # type: ignore[attr-defined]
+            ) as error:
+                raise ValueError(
+                    f"Failed to compile CEL condition '{self.condition}': {error}"
+                ) from error
+        return self
+
+    @property
+    def compiled_condition(self) -> Any:
+        return self._compiled_condition
 
 
 class StdioTransportRule(BaseModel):
@@ -106,5 +133,5 @@ class CompiledRule:
 
     tool_pattern: Pattern[str]
     action: PolicyAction
-    condition_code: str | None
+    compiled_condition: Any | None
     original_rule_str: str  # For logging

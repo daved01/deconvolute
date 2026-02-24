@@ -40,7 +40,7 @@ def policy():
                     ToolRule(
                         name="conditional.tool",
                         action=PolicyAction.ALLOW,
-                        condition="args.force is True",
+                        condition="args.force == true",
                         reason=None,
                     ),
                     # 4. Infix wildcard
@@ -89,9 +89,9 @@ def test_compile_rules_condition(firewall):
     """Test that conditions are compiled into code objects."""
     compiled = firewall._compiled_rules
     # Rule 2 (conditional.tool) has a condition
-    assert compiled[2].condition_code is not None
+    assert compiled[2].compiled_condition is not None
     # Rule 4 has no condition
-    assert compiled[4].condition_code is None
+    assert compiled[4].compiled_condition is None
 
 
 def test_evaluate_rules_precedence(firewall):
@@ -128,7 +128,7 @@ def test_evaluate_rules_with_condition(firewall):
                     ToolRule(
                         name="cond.tool",
                         action=PolicyAction.ALLOW,
-                        condition="args.safe is True",
+                        condition="args.safe == true",
                         reason=None,
                     ),
                     ToolRule(
@@ -166,7 +166,7 @@ def test_evaluate_rules_discovery_mode(firewall):
                     ToolRule(
                         name="cond.tool",
                         action=PolicyAction.ALLOW,
-                        condition="args.safe is True",
+                        condition="args.safe == true",
                         reason=None,
                     ),
                 ],
@@ -254,7 +254,7 @@ def test_evaluate_rules_condition_error(firewall, caplog):
     with caplog.at_level("WARNING"):
         action = fw._evaluate_rules("bad.tool", {"other": 1})
         assert action == PolicyAction.BLOCK  # Default
-        assert "Condition runtime error" in caplog.text
+        assert "CEL evaluation error" in caplog.text
 
 
 def test_check_tool_list_filtering(firewall):
@@ -438,3 +438,54 @@ def test_verify_transport_origin_sse_mismatch():
     origin = SSEOrigin(type="sse", url="https://evil.com/events")
     with pytest.raises(TransportSpoofingError, match="URL mismatch"):
         fw._verify_transport_origin("local", origin)
+
+
+def test_evaluate_rules_cel_corner_cases(firewall, caplog):
+    """Test CEL evaluation with nested types and non-boolean returns."""
+    policy = SecurityPolicy(
+        version="2.0",
+        default_action=PolicyAction.BLOCK,
+        servers={
+            "local": ServerPolicy(
+                tools=[
+                    # 1. Nested dictionary access
+                    ToolRule(
+                        name="nested.tool",
+                        action=PolicyAction.ALLOW,
+                        condition="args.metadata.version == 'v1'",
+                        reason=None,
+                    ),
+                    # 2. Non-boolean return (e.g. size of list)
+                    ToolRule(
+                        name="nonbool.tool",
+                        action=PolicyAction.ALLOW,
+                        condition="size(args.items)",
+                        reason=None,
+                    ),
+                ],
+                description="Corner cases policy.",
+            )
+        },
+    )
+    fw = MCPFirewall(policy)
+    fw.set_server("local")
+
+    # nested dictionary access successful
+    assert (
+        fw._evaluate_rules("nested.tool", {"metadata": {"version": "v1"}})
+        == PolicyAction.ALLOW
+    )
+    # nested dictionary access fails condition
+    assert (
+        fw._evaluate_rules("nested.tool", {"metadata": {"version": "v2"}})
+        == PolicyAction.BLOCK
+    )
+
+    # non-boolean return 0 (falsy) - CEL size() returns CEL int which
+    # truthifies to False if 0.
+    # Wait, in CEL, expressions used as conditions must evaluate to bool.
+    # However, we cast to bool in python.
+    # celpy evaluates `size(args.items)` to `celtypes.IntType`.
+    # `bool(celtypes.IntType(0))` is False, `bool(celtypes.IntType(2))` is True.
+    assert fw._evaluate_rules("nonbool.tool", {"items": [1, 2]}) == PolicyAction.ALLOW
+    assert fw._evaluate_rules("nonbool.tool", {"items": []}) == PolicyAction.BLOCK

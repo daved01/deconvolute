@@ -5,7 +5,7 @@ import pytest
 import yaml
 
 from deconvolute.core.policy import PolicyLoader
-from deconvolute.errors import ConfigurationError
+from deconvolute.errors import ConfigurationError, PolicyCompilationError
 from deconvolute.models.policy import (
     PolicyAction,
     SecurityPolicy,
@@ -80,7 +80,9 @@ class TestPolicyLoader:
             policy_path = f.name
 
         try:
-            with pytest.raises(ConfigurationError, match="Failed to parse policy file"):
+            with pytest.raises(
+                PolicyCompilationError, match="Policy validation or compilation failed"
+            ):
                 PolicyLoader.load(policy_path)
         finally:
             os.remove(policy_path)

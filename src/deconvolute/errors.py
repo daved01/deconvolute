@@ -48,6 +48,12 @@ class MCPSessionError(DeconvoluteError):
     pass
 
 
+class PolicyCompilationError(ConfigurationError):
+    """Raised when a CEL policy condition contains syntax or logic errors."""
+
+    pass
+
+
 class TransportSpoofingError(MCPSessionError):
     """
     Raised when the physical origin of a connection does not match

@@ -97,10 +97,10 @@ result = await safe_session.call_tool("read_file", path="/docs/report.md")
 print(result.content[0].text)
 
 # Blocked: execute_code not in policy
-# Returns a valid result with is_error=True to prevent crashes
+# Returns a valid result with isError=True to prevent crashes
 result = await safe_session.call_tool("execute_code", code="import os; os.system('rm -rf /')")
 
-if result.is_error:
+if result.isError:
     print(f"Firewall blocked: {result.content[0].text}")
     # Output: "Tool 'execute_code' not in approved policy"
 ```
@@ -179,7 +179,7 @@ await safe_session.initialize()
 # Execution: Agent tries to call a tool that wasn't in the snapshot
 result = await safe_session.call_tool("execute_code", code="os.system('...')")
 
-if result.is_error:
+if result.isError:
     print(f"Attack detected: {result.content[0].text}")
     # Output: "🚫 Security Violation: Tool 'execute_code' not found in allowed session registry."
 ```
@@ -337,7 +337,7 @@ tools:
 
 ### Architectural Note: Exceptions vs. Error Objects
 
-When a tool policy violation occurs during `call_tool`, Deconvolute returns an MCP `CallToolResult` with `is_error=True`. This is intentional. The session itself is still trusted, and returning an error object stays within the boundaries of the protocol, allowing the AI agent to read the error and gracefully adjust its approach.
+When a tool policy violation occurs during `call_tool`, Deconvolute returns an MCP `CallToolResult` with `isError=True`. This is intentional. The session itself is still trusted, and returning an error object stays within the boundaries of the protocol, allowing the AI agent to read the error and gracefully adjust its approach.
 
 However, Server Identity Spoofing is an infrastructure level compromise. If the server is lying about its transport origin, the entire entity on the other side of the connection is fundamentally untrustworthy. You do not want to negotiate with a compromised server or allow the agent to interact with it at all.
 

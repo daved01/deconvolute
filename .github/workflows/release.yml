@@ -84,6 +84,9 @@ jobs:
           uv run ruff check .
           uv run mypy .
           uv run pytest
+      
+      - name: Run MCP Contract Regression Tests
+        run: uv run pytest tests/regression/ -v
 
       - name: Build Package
         run: uv build

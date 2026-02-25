@@ -59,7 +59,7 @@ class TestLiveMCP:
                     result = await guarded_client.call_tool(
                         "echo", arguments={"message": "Hello MCP"}
                     )
-                    assert not result.is_error  # type: ignore[attr-defined]
+                    assert not result.isError  # type: ignore[attr-defined]
                     content = result.content[0]
                     assert isinstance(content, types.TextContent)
                     assert content.text == "Echo: Hello MCP"
@@ -69,7 +69,7 @@ class TestLiveMCP:
                     result = await guarded_client.call_tool(
                         "add", arguments={"a": 10, "b": 32}
                     )
-                    assert not result.is_error  # type: ignore[attr-defined]
+                    assert not result.isError  # type: ignore[attr-defined]
                     content = result.content[0]
                     assert isinstance(content, types.TextContent)
                     assert content.text == "42"

@@ -118,7 +118,7 @@ async def test_strict_mode_blocks_vanished_tool(mock_session, mock_firewall):
     # 3. Execution
     result = await proxy.call_tool("tool_a", {})
 
-    assert result.is_error is True  # type: ignore[attr-defined]
+    assert result.isError is True  # type: ignore[attr-defined]
     assert result.content[0].type == "text"
     assert "Strict Integrity Violation" in result.content[0].text
     # Firewall should NOT be called if tool is missing from server
@@ -134,7 +134,7 @@ async def test_strict_mode_handles_server_error(mock_session, mock_firewall):
 
     result = await proxy.call_tool("tool_a", {})
 
-    assert result.is_error is True  # type: ignore[attr-defined]
+    assert result.isError is True  # type: ignore[attr-defined]
     assert "Strict Integrity Check Failed" in result.content[0].text  # type: ignore
 
 
@@ -204,6 +204,6 @@ async def test_strict_mode_pagination_infinite_loop_protection(
     # see stuck_cursor again and realize it's an infinite loop, then stop.
     result = await proxy.call_tool("tool_missing", {})
 
-    assert result.is_error is True  # type: ignore[attr-defined]
+    assert result.isError is True  # type: ignore[attr-defined]
     # 1 (discovery) + 2 (first request, second request with stuck_cursor)
     assert mock_session.list_tools.call_count == 3

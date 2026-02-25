@@ -10,6 +10,9 @@ from .scanners.integrity import CanaryScanner, CanarySecurityResult
 
 __version__ = "0.1.0a15"
 
+# The explicitly tested and supported version of the upstream MCP SDK
+__mcp_supported_version__ = "1.26.0"
+
 __all__ = [
     "llm_guard",
     "mcp_guard",

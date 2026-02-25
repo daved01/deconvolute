@@ -112,7 +112,8 @@ We follow Conventional Commits. This allows us to generate changelogs automatica
     ```
 
 2. **Bump Version:** Update `__version__` string in `src/deconvolute/__init__.py`.
-3. **Commit & Push:**
+3. **Verify MCP SDK Version:** Check the latest version and update it in `__mcp_supported_version__` string in `src/deconvolute/__init__.py` if necessary.
+4. **Commit & Push:**
     Commit the `CHANGELOG.md` and `__init__.py` files, then push to `main`.
 
     ```bash
@@ -120,7 +121,7 @@ We follow Conventional Commits. This allows us to generate changelogs automatica
     git push origin main
     ```
 
-4. **Trigger Release:**
+5. **Trigger Release:**
     * Go to the **Actions** tab on GitHub.
     * Select **Release to TestPyPI** (or **Release to PyPI** once configured).
     * Click **Run workflow** and enter the version number (e.g. `0.1.0`).

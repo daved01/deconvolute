@@ -89,6 +89,8 @@ servers:
 
 The firewall loads this policy at runtime. If a blocked tool is called, the SDK blocks the request locally without contacting the server.
 
+Note that the `version` key in the policy file indicates the version of the policy. Currently, only version `2.0` is supported.
+
 ### Strict Origin Validation (Advanced)
 
 By default, the firewall relies on the server's self-reported name. To prevent Server Identity Spoofing where a malicious server claims a trusted name, Deconvolute provides advanced secure context managers. These bind the server's identity directly to its physical transport origin (e.g. local executable path or remote URL).

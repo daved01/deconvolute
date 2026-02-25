@@ -1,3 +1,8 @@
+## [0.1.0b1] - 2026-02-25
+
+### 🚀 Features
+
+- Add regression tests to track and validate changes against upstream mcp sdk
 ## [0.1.0a15] - 2026-02-24
 
 ### 🚀 Features
@@ -17,6 +22,7 @@
 - Fix exports
 - Fix bugs late wrapping and conditional discovery
 - Handle pagination of tools correctly
+- Prepare v0.1.0a15
 ## [0.1.0a14] - 2026-02-15
 
 ### 🚀 Features

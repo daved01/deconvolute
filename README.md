@@ -10,8 +10,8 @@
 
 When your AI agent calls tools on an MCP server, how do you know that `read_file` tool you discovered at session start is the same tool being executed 10 turns later? Deconvolute cryptographically seals tool definitions at discovery time to prevent tampering during execution, blocking infrastructure attacks that stateless scanners miss.
 
-> [!WARNING]
-> Alpha version under active development. API might change.
+> [!IMPORTANT]
+> Public Beta: The core API and security policies are stable. Currently seeking feedback.
 
 ## Quick Start
 

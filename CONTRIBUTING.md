@@ -112,7 +112,7 @@ We follow Conventional Commits. This allows us to generate changelogs automatica
     ```
 
 2. **Bump Version:** Update `__version__` string in `src/deconvolute/__init__.py`.
-3. **Verify MCP SDK Version:** Check the latest version and update it in `__mcp_supported_version__` string in `src/deconvolute/__init__.py` and in the Reamde.md if necessary.
+3. **Verify MCP SDK Version:** Check the latest version. If necessary, update it in the `__mcp_supported_version__` string in `src/deconvolute/__init__.py` and in the `Readme.md` badge.
 4. **Commit & Push:**
     Commit the `CHANGELOG.md` and `__init__.py` files, then push to `main`.
 

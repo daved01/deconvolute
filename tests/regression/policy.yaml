@@ -9,3 +9,6 @@ servers:
         action: "allow"
       - name: "blocked_tool"
         action: "block"
+      - name: "read_file"
+        action: "allow"
+        condition: "!args.path.contains('/etc/')"

@@ -65,7 +65,7 @@ async def main() -> None:
             read_stream,
             write_stream,
             InitializationOptions(
-                server_name="deconvolute-integration-test",
+                server_name="live-test-server",
                 server_version="0.1.0",
                 capabilities=server.get_capabilities(
                     notification_options=NotificationOptions(),

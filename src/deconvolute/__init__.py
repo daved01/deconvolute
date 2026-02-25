@@ -1,4 +1,11 @@
-from .core.api import a_scan, llm_guard, mcp_guard, scan
+from .core.api import (
+    a_scan,
+    llm_guard,
+    mcp_guard,
+    scan,
+    secure_sse_session,
+    secure_stdio_session,
+)
 from .errors import DeconvoluteError, SecurityResultError
 from .models.security import SecurityResult
 from .scanners.content import (
@@ -25,5 +32,7 @@ __all__ = [
     "LanguageSecurityResult",
     "SignatureScanner",
     "SecurityResultError",
+    "secure_stdio_session",
+    "secure_sse_session",
     "DeconvoluteError",
 ]

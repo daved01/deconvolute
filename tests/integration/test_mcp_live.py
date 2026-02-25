@@ -8,12 +8,7 @@ from mcp.client.stdio import stdio_client
 
 from deconvolute import mcp_guard
 
-# Skip tests if NOT running in live mode
-run_live = os.getenv("DCV_LIVE_TEST") == "true"
-reason = "Skipping live MCP tests. Run with DCV_LIVE_TEST=true to enable."
 
-
-@pytest.mark.skipif(not run_live, reason=reason)
 @pytest.mark.asyncio
 class TestLiveMCP:
     async def test_mcp_guard_integration(self):

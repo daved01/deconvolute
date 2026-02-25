@@ -1,0 +1,14 @@
+version: "2.0"
+default_action: "block"
+servers:
+  test-server:
+    transport:
+      type: "stdio"
+    tools:
+      - name: "test_tool"
+        action: "allow"
+      - name: "blocked_tool"
+        action: "block"
+      - name: "read_file"
+        action: "allow"
+        condition: "!args.path.contains('/etc/')"

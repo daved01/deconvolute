@@ -136,7 +136,7 @@ async def test_call_tool_blocked(proxy, mock_session, mock_firewall, mock_mcp_mo
     types_mock = mock_mcp_modules
 
     mock_result_instance = MagicMock()
-    mock_result_instance.is_error = True
+    mock_result_instance.isError = True
     mock_result_instance.content = [MagicMock(text="🚫 Security Violation: bad tool")]
 
     # Configure the mock class constructor to return our instance
@@ -150,7 +150,7 @@ async def test_call_tool_blocked(proxy, mock_session, mock_firewall, mock_mcp_mo
         tool_name, args, current_tool_def=None
     )
     mock_session.call_tool.assert_not_called()
-    assert result.is_error is True
+    assert result.isError is True
     assert "Security Violation: bad tool" in result.content[0].text
 
 
@@ -261,7 +261,7 @@ async def test_list_tools_discovery_event_server_details(
     tool_a = MagicMock(name="Tool_a")
     tool_a.name = "allowed_tool"
     tool_a.description = "Allowed Tool Description"
-    tool_a.input_schema = {"type": "object"}
+    tool_a.inputSchema = {"type": "object"}
 
     # Mock session response
     initial_result = MagicMock()

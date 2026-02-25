@@ -4,6 +4,7 @@
 [![License](https://img.shields.io/pypi/l/deconvolute.svg)](https://pypi.org/project/deconvolute/)
 [![PyPI version](https://img.shields.io/pypi/v/deconvolute.svg?color=green)](https://pypi.org/project/deconvolute/)
 [![Supported Python versions](https://img.shields.io/badge/python->=3.11-blue.svg?)](https://pypi.org/project/deconvolute/)
+[![Supported MCP SDK](https://img.shields.io/badge/MCP_SDK-1.26.0-blue.svg)](https://pypi.org/project/mcp/)
 
 **Secure your MCP agents against tool shadowing, rug pulls, and confused deputy attacks with a single wrapper.**
 
@@ -42,10 +43,10 @@ await safe_session.initialize()
 result = await safe_session.call_tool("read_file", path="/docs/report.md")
 
 # Blocked: execute_code not in policy
-# Returns a valid result with is_error=True to prevent crashes
+# Returns a valid result with isError=True to prevent crashes
 result = await safe_session.call_tool("execute_code", code="import os; os.system('rm -rf /')")
 
-if result.is_error:
+if result.isError:
     print(f"Firewall blocked: {result.content[0].text}")
 
 ```

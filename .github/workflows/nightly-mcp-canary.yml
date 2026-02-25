@@ -1,0 +1,94 @@
+name: Nightly MCP Canary
+
+on:
+  schedule:
+    # Runs at 02:00 UTC every day
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  test-latest-upstream:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Force Upgrade MCP SDK to Latest PyPI Release
+        run: uv add --dev mcp@latest
+
+      - name: Analyze Versions and Generate Summary
+        # To access package metadata
+        run: |
+          uv run python -c '
+          import os
+          import re
+          from importlib.metadata import version
+          from packaging.version import parse
+
+          # Read the officially supported version from __init__.py
+          supported_version = "Unknown"
+          try:
+              with open("src/deconvolute/__init__.py", "r") as f:
+                  content = f.read()
+              match = re.search(r"__mcp_supported_version__\s*=\s*[\"x27]([^\"]+)[\"x27]", content)
+              if match:
+                  supported_version = match.group(1)
+          except Exception as e:
+              print(f"Failed to read __init__.py: {e}")
+
+          # Get the newly installed latest version from PyPI
+          installed_version = version("mcp")
+
+          # Build the Markdown Summary
+          summary = ["### 🦅 Nightly MCP Canary Report"]
+          summary.append(f"- **Currently Supported MCP Version:** `{supported_version}`")
+          summary.append(f"- **Tested Upstream MCP Version:** `{installed_version}`")
+          summary.append("")
+
+          if supported_version != "Unknown":
+              if parse(installed_version) > parse(supported_version):
+                  summary.append("> [!WARNING]")
+                  summary.append(f"> **New Version Available!** The upstream `mcp` SDK has released version **{installed_version}**.")
+                  summary.append("> *If these tests pass, consider bumping `__mcp_supported_version__` and updating the lockfile.*")
+              elif parse(installed_version) == parse(supported_version):
+                  summary.append("> [!NOTE]")
+                  summary.append("> Deconvolute is currently tracking the absolute latest stable release of the MCP SDK.")
+          
+          summary_text = "\n".join(summary)
+          print(f"Supported: {supported_version} | Installed: {installed_version}")
+
+          # Write to the GitHub Actions UI Summary
+          summary_file = os.environ.get("GITHUB_STEP_SUMMARY")
+          if summary_file:
+              with open(summary_file, "a") as f:
+                  f.write(summary_text + "\n")
+          '
+
+      - name: Run Regression Tests Against Latest Upstream
+        id: regression_tests
+        run: uv run pytest tests/regression/ -v
+
+      - name: Append Test Results to Summary
+        if: always() # This ensures the summary updates even if pytest fails
+        run: |
+          echo "### 🧪 Regression Test Results" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.regression_tests.outcome }}" == "success" ]; then
+            echo "✅ **PASS:** The Deconvolute proxy is fully compatible with the latest upstream release." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **FAIL:** Regression tests failed! The upstream SDK introduced a breaking change." >> $GITHUB_STEP_SUMMARY
+          fi

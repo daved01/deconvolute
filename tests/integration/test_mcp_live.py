@@ -8,12 +8,7 @@ from mcp.client.stdio import stdio_client
 
 from deconvolute import mcp_guard
 
-# Skip tests if NOT running in live mode
-run_live = os.getenv("DCV_LIVE_TEST") == "true"
-reason = "Skipping live MCP tests. Run with DCV_LIVE_TEST=true to enable."
 
-
-@pytest.mark.skipif(not run_live, reason=reason)
 @pytest.mark.asyncio
 class TestLiveMCP:
     async def test_mcp_guard_integration(self):
@@ -59,7 +54,7 @@ class TestLiveMCP:
                     result = await guarded_client.call_tool(
                         "echo", arguments={"message": "Hello MCP"}
                     )
-                    assert not result.is_error  # type: ignore[attr-defined]
+                    assert not result.isError
                     content = result.content[0]
                     assert isinstance(content, types.TextContent)
                     assert content.text == "Echo: Hello MCP"
@@ -69,7 +64,7 @@ class TestLiveMCP:
                     result = await guarded_client.call_tool(
                         "add", arguments={"a": 10, "b": 32}
                     )
-                    assert not result.is_error  # type: ignore[attr-defined]
+                    assert not result.isError
                     content = result.content[0]
                     assert isinstance(content, types.TextContent)
                     assert content.text == "42"

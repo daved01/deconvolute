@@ -212,6 +212,8 @@ for tool_name, snapshot in registry.all_tools.items():
 
 Security rules are enforced using a **First Match Wins** strategy. This makes it easy to create "safe exceptions" within your policy.
 
+Note that the version key in the policy file indicates the version of the policy. Currently, only version `2.0` is supported.
+
 **Policy Semantics**:
 - Rules are evaluated in order.
 - The `tool` field supports regex patterns (automatically anchored).
@@ -231,6 +233,7 @@ tools:
   - name: "*"
     action: "allow"   # This allows everything ELSE
 ```
+
 
 ### Advanced: Preventing Server Identity Spoofing
 

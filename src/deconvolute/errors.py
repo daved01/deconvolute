@@ -54,6 +54,12 @@ class PolicyCompilationError(ConfigurationError):
     pass
 
 
+class PolicyValidationError(ConfigurationError):
+    """Custom exception for clear policy formatting errors."""
+
+    pass
+
+
 class TransportSpoofingError(MCPSessionError):
     """
     Raised when the physical origin of a connection does not match

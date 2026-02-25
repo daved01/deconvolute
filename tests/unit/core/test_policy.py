@@ -5,7 +5,10 @@ import pytest
 import yaml
 
 from deconvolute.core.policy import PolicyLoader
-from deconvolute.errors import ConfigurationError, PolicyCompilationError
+from deconvolute.errors import (
+    ConfigurationError,
+    PolicyValidationError,
+)
 from deconvolute.models.policy import (
     PolicyAction,
     SecurityPolicy,
@@ -62,7 +65,7 @@ class TestPolicyLoader:
             policy_path = f.name
 
         try:
-            with pytest.raises(ConfigurationError, match="Failed to parse policy file"):
+            with pytest.raises(PolicyValidationError, match="Invalid YAML syntax"):
                 PolicyLoader.load(policy_path)
         finally:
             os.remove(policy_path)
@@ -81,7 +84,23 @@ class TestPolicyLoader:
 
         try:
             with pytest.raises(
-                PolicyCompilationError, match="Policy validation or compilation failed"
+                PolicyValidationError, match="Malformed security policy"
+            ):
+                PolicyLoader.load(policy_path)
+        finally:
+            os.remove(policy_path)
+
+    def test_load_unsupported_version(self):
+        """Test loading a policy with an unsupported version."""
+        policy_data = {"version": "1.0", "default_action": "block", "servers": {}}
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            yaml.dump(policy_data, f)
+            policy_path = f.name
+
+        try:
+            with pytest.raises(
+                PolicyValidationError, match="Unsupported policy version: '1.0'"
             ):
                 PolicyLoader.load(policy_path)
         finally:

@@ -3,7 +3,7 @@ import os
 import yaml
 from pydantic import ValidationError
 
-from deconvolute.constants import DEFAULT_MCP_POLICY_FILENAME
+from deconvolute.constants import CURRENT_POLICY_VERSION, DEFAULT_MCP_POLICY_FILENAME
 from deconvolute.errors import (
     ConfigurationError,
     PolicyValidationError,
@@ -45,10 +45,11 @@ class PolicyLoader:
                 raw_data = yaml.safe_load(f) or {}
 
             # Enforce version checking immediately
-            if raw_data.get("version") not in ["2.0"]:
+            if raw_data.get("version") not in [CURRENT_POLICY_VERSION]:
                 raise PolicyValidationError(
                     f"Unsupported policy version: '{raw_data.get('version')}'. "
-                    f"Deconvolute currently requires version: '2.0'."
+                    "Deconvolute currently requires version: "
+                    f"'{CURRENT_POLICY_VERSION}'."
                 )
 
             # Pydantic will trigger the CEL compilation during instantiation

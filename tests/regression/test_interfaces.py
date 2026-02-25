@@ -30,7 +30,7 @@ def mcp_server() -> Server:
     """Sets up a lightweight, in-memory MCP server."""
     app = Server("test-server")
 
-    @app.list_tools()
+    @app.list_tools()  # type: ignore[no-untyped-call, untyped-decorator]
     async def list_tools() -> list[types.Tool]:
         test_tool_raw = {
             "name": "test_tool",
@@ -54,7 +54,7 @@ def mcp_server() -> Server:
             types.Tool.model_validate(blocked_tool_raw),
         ]
 
-    @app.call_tool()
+    @app.call_tool()  # type: ignore[untyped-decorator]
     async def call_tool(
         name: str, arguments: dict[str, Any]
     ) -> list[types.TextContent]:
@@ -158,7 +158,7 @@ async def test_pagination_and_cursor_extraction(
             call_count += 1
             if call_count == 1:
                 # Page 1: Returns a dummy tool and a cursor for the next page
-                raw_result = {
+                raw_result: dict[str, Any] = {
                     "tools": [
                         {"name": "tool_page_1", "description": "1", "inputSchema": {}}
                     ],
@@ -206,6 +206,7 @@ async def test_pagination_and_cursor_extraction(
         # This asserts we successfully found the tool on page 2 and passed
         # it to the firewall!
         assert getattr(result, "isError", getattr(result, "is_error", False)) is True
+        assert isinstance(result.content[0], types.TextContent)
         assert "Security Violation" in result.content[0].text
 
 
@@ -241,5 +242,6 @@ async def test_strict_mode_tool_vanished(
         assert getattr(result, "isError", getattr(result, "is_error", False)) is True
         assert len(result.content) == 1
         assert result.content[0].type == "text"
+        assert isinstance(result.content[0], types.TextContent)
         assert "Strict Integrity Violation" in result.content[0].text
         assert "vanished_tool" in result.content[0].text

@@ -32,7 +32,7 @@ def mcp_server() -> Server:
     """
     app = Server("test-server")
 
-    @app.list_tools()
+    @app.list_tools()  # type: ignore[no-untyped-call, untyped-decorator]
     async def list_tools() -> list[types.Tool]:
         raw_tools = [
             {
@@ -57,7 +57,7 @@ def mcp_server() -> Server:
         ]
         return [types.Tool.model_validate(t) for t in raw_tools]
 
-    @app.call_tool()
+    @app.call_tool()  # type: ignore[untyped-decorator]
     async def call_tool(
         name: str, arguments: dict[str, Any]
     ) -> list[types.TextContent]:
@@ -99,6 +99,7 @@ async def test_payload_inspection_cel_conditions(
             getattr(safe_result, "isError", getattr(safe_result, "is_error", False))
             is False
         )
+        assert isinstance(safe_result.content[0], types.TextContent)
         assert "Contents of data.txt" in safe_result.content[0].text
 
         # Test 2: Malicious path (should fail the CEL condition and return a synthetic
@@ -110,6 +111,7 @@ async def test_payload_inspection_cel_conditions(
             getattr(evil_result, "isError", getattr(evil_result, "is_error", False))
             is True
         )
+        assert isinstance(evil_result.content[0], types.TextContent)
         assert "Security Violation" in evil_result.content[0].text
 
 
@@ -207,5 +209,6 @@ async def test_unregistered_tool_fails_integrity_check(
         # Verify the firewall blocks it at the integrity phase
         assert getattr(result, "isError", getattr(result, "is_error", False)) is True
         assert len(result.content) == 1
+        assert isinstance(result.content[0], types.TextContent)
         assert "integrity check" in result.content[0].text.lower()
         assert "not registered" in result.content[0].text.lower()

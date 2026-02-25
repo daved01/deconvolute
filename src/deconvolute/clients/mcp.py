@@ -308,7 +308,7 @@ class MCPProxy:
                                 "no longer advertised by the server.",
                             )
                         ],
-                        isError=True,  # type: ignore[call-arg]
+                        isError=True,
                     )
             except Exception as e:
                 try:
@@ -324,7 +324,7 @@ class MCPProxy:
                                 ),
                             )
                         ],
-                        isError=True,  # type: ignore[call-arg]
+                        isError=True,
                     )
                 finally:
                     # Log the event for the system error
@@ -399,7 +399,7 @@ class MCPProxy:
                         text=f"🚫 Security Violation: {reason}",
                     )
                 ],
-                isError=True,  # type: ignore[call-arg]
+                isError=True,
             )
 
         # Log Warnings if present (Audit mode)

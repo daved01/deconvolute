@@ -28,7 +28,7 @@ jobs:
         run: uv sync --all-extras --dev
 
       - name: Force Upgrade MCP SDK to Latest PyPI Release
-        run: uv add --dev mcp@latest
+        run: uv add --dev mcp --upgrade
 
       - name: Analyze Versions and Generate Summary
         # To access package metadata

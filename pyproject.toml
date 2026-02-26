@@ -32,7 +32,7 @@ dependencies = [
   "cel-python>=0.5.0",
 ]
 [project.urls]
-Homepage = "https://deconvoluteai.com"
+Homepage = "https://deconvolutelabs.com"
 Issues = "https://github.com/deconvolute-labs/deconvolute/issues"
 
 [project.scripts]
